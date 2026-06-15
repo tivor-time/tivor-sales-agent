@@ -1,0 +1,7 @@
+packages:
+  - 'apps/*'
+  - 'packages/*'
+
+# Allow these dependencies to run install scripts (native binaries).
+allowBuilds:
+  esbuild: true
