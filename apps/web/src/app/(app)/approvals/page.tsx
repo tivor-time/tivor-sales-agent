@@ -1,13 +1,18 @@
-import { ClipboardCheck } from 'lucide-react'
-import { ComingSoon } from '@/components/coming-soon'
+import { DegradedBanner } from '@/components/degraded-banner'
+import { ApprovalQueue } from '@/components/outreach/approval-queue'
 
 export default function ApprovalsPage() {
   return (
-    <ComingSoon
-      title="Approval Queue"
-      phase="Phase 2"
-      icon={ClipboardCheck}
-      description="Review, edit, and bulk-approve outreach before anything is ever queued to send."
-    />
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-semibold">Approval Queue</h1>
+        <p className="text-sm text-muted-foreground">
+          Review, edit, and approve AI-drafted outreach before anything is queued. Nothing is ever
+          sent without approval.
+        </p>
+      </div>
+      <DegradedBanner />
+      <ApprovalQueue />
+    </div>
   )
 }

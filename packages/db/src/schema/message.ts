@@ -47,7 +47,17 @@ export const messages = pgTable(
     references: jsonb('references').$type<string[]>().notNull().default([]),
 
     aiMeta: jsonb('ai_meta')
-      .$type<{ model?: string; tokensIn?: number; tokensOut?: number }>()
+      .$type<{
+        model?: string
+        tokensIn?: number
+        tokensOut?: number
+        generatedByAi?: boolean
+        stepOrder?: number
+        stepKind?: string
+        subjectVariants?: string[]
+        spamLevel?: 'low' | 'medium' | 'high'
+        spamScore?: number
+      }>()
       .notNull()
       .default({}),
 

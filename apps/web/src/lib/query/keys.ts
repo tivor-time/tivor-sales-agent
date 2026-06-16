@@ -10,4 +10,7 @@ export const queryKeys = {
     all: ['catalog'] as const,
     list: (filter: { search?: string; active?: boolean }) => ['catalog', 'list', filter] as const,
   },
+  outreach: {
+    pending: ['outreach', 'pending'] as const,
+  },
 } as const

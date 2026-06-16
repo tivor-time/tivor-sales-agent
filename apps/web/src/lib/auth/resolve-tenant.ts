@@ -4,11 +4,13 @@ import { flags } from '@tradepilot/shared/env'
 import type { Role } from '@tradepilot/shared'
 import { ensureTenant, MissingContextError, type TenantContextPartial } from '@tradepilot/db'
 
+// In zero-auth dev mode, use the seeded SDAE reference tenant so the dev workspace
+// shows its catalog + leads (rather than a separate empty tenant).
 const LOCAL_DEV = {
-  clerkOrgId: 'org_local_dev',
-  clerkUserId: 'user_local_dev',
-  orgName: 'Local Dev Workspace',
-  userEmail: 'dev@localhost',
+  clerkOrgId: 'org_sdae_seed',
+  clerkUserId: 'user_sdae_seed',
+  orgName: 'Sri Durga Agro Exports',
+  userEmail: 'info@tivor.us',
 } as const
 
 function mapClerkRole(orgRole?: string | null): Role {

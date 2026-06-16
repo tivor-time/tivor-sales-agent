@@ -18,6 +18,7 @@ import { TableSkeleton } from '@/components/loading-skeleton'
 import { useLeads, useUpdateLeadStage, useBulkSetStage, useBulkDeleteLeads } from '@/lib/query/leads'
 import { cn } from '@/lib/utils'
 import { ImportDialog } from './import-dialog'
+import { GenerateOutreachDialog } from '@/components/outreach/generate-dialog'
 import { IcpScore, STAGE_LABELS, LEAD_STAGES } from './stage'
 
 const PAGE_SIZE = 25
@@ -142,6 +143,7 @@ export function LeadsView() {
               </option>
             ))}
           </select>
+          <GenerateOutreachDialog leadIds={selectedIds} onDone={() => setSelected(new Set())} />
           <Button
             variant="outline"
             size="sm"

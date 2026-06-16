@@ -10,7 +10,8 @@
     "./env": "./src/env.ts",
     "./logger": "./src/logger.ts",
     "./providers": "./src/providers/index.ts",
-    "./import": "./src/import/index.ts"
+    "./import": "./src/import/index.ts",
+    "./outreach": "./src/outreach/index.ts"
   },
   "scripts": {
     "lint": "eslint .",

@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.104.2",
     "@clerk/nextjs": "^6.9.6",
     "@hookform/resolvers": "^3.9.1",
     "@radix-ui/react-dialog": "^1.1.4",

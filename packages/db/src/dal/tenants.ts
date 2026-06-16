@@ -63,6 +63,7 @@ export async function assertTenantExists(
 /** Read a tenant's profile (target markets, default language, company profile) for
  * ICP scoring and AI personalization. Global read via the resolver layer. */
 export async function getTenantProfile(tenantId: string): Promise<{
+  name: string
   targetMarkets: string[]
   defaultLanguage: Language
   companyProfile: Record<string, unknown>
@@ -70,6 +71,7 @@ export async function getTenantProfile(tenantId: string): Promise<{
   const db = getDb()
   const rows = await db
     .select({
+      name: tenants.name,
       targetMarkets: tenants.targetMarkets,
       defaultLanguage: tenants.defaultLanguage,
       companyProfile: tenants.companyProfile,
@@ -80,6 +82,7 @@ export async function getTenantProfile(tenantId: string): Promise<{
   const row = rows[0]
   if (!row) throw new TenantNotFoundError(tenantId)
   return {
+    name: row.name,
     targetMarkets: row.targetMarkets ?? [],
     defaultLanguage: row.defaultLanguage as Language,
     companyProfile: (row.companyProfile ?? {}) as Record<string, unknown>,
