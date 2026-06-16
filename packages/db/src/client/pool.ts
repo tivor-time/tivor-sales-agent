@@ -19,6 +19,11 @@ import { DatabaseUnavailableError } from '../dal/errors'
 export type AppDatabase = NodePgDatabase<typeof schema>
 export type AppTransaction = Parameters<Parameters<AppDatabase['transaction']>[0]>[0]
 
+/** Hosted Postgres (Supabase, Neon, etc.) requires TLS; local Postgres does not. */
+function requiresTls(url: string): boolean {
+  return /supabase\.|sslmode=require|\.pooler\./i.test(url)
+}
+
 let pool: Pool | undefined
 let dbInstance: AppDatabase | undefined
 
@@ -30,7 +35,11 @@ export function isDbConfigured(): boolean {
 export function getDb(): AppDatabase {
   if (!env.DATABASE_URL) throw new DatabaseUnavailableError()
   if (!dbInstance) {
-    pool = new Pool({ connectionString: env.DATABASE_URL, max: 10 })
+    pool = new Pool({
+      connectionString: env.DATABASE_URL,
+      max: 10,
+      ssl: requiresTls(env.DATABASE_URL) ? { rejectUnauthorized: false } : false,
+    })
     dbInstance = drizzle(pool, { schema, casing: 'snake_case' })
   }
   return dbInstance

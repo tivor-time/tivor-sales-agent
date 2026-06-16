@@ -14,13 +14,13 @@ selling to DE/ES/FR/PL.
 
 - **Frontend:** Next.js (App Router) + TypeScript (strict) + Tailwind + shadcn/ui · TanStack Query · React Hook Form + Zod
 - **Backend:** Next.js server actions/route handlers + a separate worker service
-- **DB:** PostgreSQL (Neon) + Drizzle ORM (typed migrations), `tenant_id` on every row
+- **DB:** PostgreSQL (Supabase) + Drizzle ORM (typed migrations), `tenant_id` on every row
 - **Jobs:** Inngest (durable, idempotent, retryable)
 - **Auth + multi-tenancy:** Clerk Organizations (org = tenant)
 - **AI:** Anthropic Claude
 - **Email:** Gmail API + Microsoft Graph (OAuth) · Resend (transactional)
 - **Payments:** Stripe (plans + metered usage)
-- **Hosting:** Vercel (web) · Railway (worker) · Neon (db) · Upstash (Redis)
+- **Hosting:** Vercel (web) · Railway (worker) · Supabase (db) · Upstash (Redis)
 - **Observability:** Sentry · pino structured logs · OpenTelemetry · per-tenant audit log
 - **Testing:** Vitest (unit) · Playwright (e2e) · CI on every PR
 

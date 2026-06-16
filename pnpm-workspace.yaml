@@ -4,4 +4,7 @@ packages:
 
 # Allow these dependencies to run install scripts (native binaries).
 allowBuilds:
+  '@clerk/shared': true
   esbuild: true
+  sharp: true
+  unrs-resolver: true

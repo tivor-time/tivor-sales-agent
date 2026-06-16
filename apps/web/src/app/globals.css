@@ -1,0 +1,95 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Surfaces */
+    --background: 210 40% 98%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    /* Brand */
+    --primary: 231 48% 38%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 215 28% 92%;
+    --secondary-foreground: 222 47% 18%;
+    --accent: 38 92% 50%;
+    --accent-foreground: 26 83% 14%;
+
+    /* Feedback */
+    --muted: 215 28% 95%;
+    --muted-foreground: 215 16% 42%;
+    --destructive: 0 72% 45%;
+    --destructive-foreground: 210 40% 98%;
+    --success: 142 64% 30%;
+    --success-foreground: 138 76% 97%;
+    --warning: 38 92% 42%;
+    --warning-foreground: 26 83% 12%;
+
+    /* Lines & focus */
+    --border: 214 20% 86%;
+    --input: 214 20% 86%;
+    --ring: 231 48% 48%;
+
+    /* Charts */
+    --chart-1: 231 48% 48%;
+    --chart-2: 38 92% 50%;
+    --chart-3: 142 64% 38%;
+    --chart-4: 280 50% 55%;
+    --chart-5: 199 80% 45%;
+
+    --radius: 0.625rem;
+  }
+
+  .dark {
+    --background: 222 47% 8%;
+    --foreground: 210 40% 96%;
+    --card: 222 44% 11%;
+    --card-foreground: 210 40% 96%;
+    --popover: 222 44% 11%;
+    --popover-foreground: 210 40% 96%;
+
+    --primary: 231 60% 67%;
+    --primary-foreground: 222 47% 11%;
+    --secondary: 217 19% 20%;
+    --secondary-foreground: 210 40% 96%;
+    --accent: 38 92% 55%;
+    --accent-foreground: 26 83% 12%;
+
+    --muted: 217 19% 18%;
+    --muted-foreground: 215 18% 68%;
+    --destructive: 0 63% 58%;
+    --destructive-foreground: 222 47% 11%;
+    --success: 142 55% 55%;
+    --success-foreground: 222 47% 11%;
+    --warning: 38 92% 60%;
+    --warning-foreground: 26 83% 12%;
+
+    --border: 217 19% 24%;
+    --input: 217 19% 24%;
+    --ring: 231 60% 67%;
+
+    --chart-1: 231 60% 67%;
+    --chart-2: 38 92% 55%;
+    --chart-3: 142 55% 55%;
+    --chart-4: 280 60% 70%;
+    --chart-5: 199 80% 60%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: 'cv11', 'ss01';
+  }
+  :focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+}
