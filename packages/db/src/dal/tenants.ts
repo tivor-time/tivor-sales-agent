@@ -8,7 +8,7 @@
  */
 import { randomUUID } from 'node:crypto'
 import { and, eq, isNull } from 'drizzle-orm'
-import type { Role } from '@tradepilot/shared'
+import type { Role, Language } from '@tradepilot/shared'
 import { getDb } from '../client/pool'
 import { withTenantTransaction } from '../client/rls'
 import { tenants, users, memberships } from '../schema'
@@ -58,6 +58,32 @@ export async function assertTenantExists(
   const row = rows[0]
   if (!row) throw new TenantNotFoundError(tenantId)
   return row
+}
+
+/** Read a tenant's profile (target markets, default language, company profile) for
+ * ICP scoring and AI personalization. Global read via the resolver layer. */
+export async function getTenantProfile(tenantId: string): Promise<{
+  targetMarkets: string[]
+  defaultLanguage: Language
+  companyProfile: Record<string, unknown>
+}> {
+  const db = getDb()
+  const rows = await db
+    .select({
+      targetMarkets: tenants.targetMarkets,
+      defaultLanguage: tenants.defaultLanguage,
+      companyProfile: tenants.companyProfile,
+    })
+    .from(tenants)
+    .where(and(eq(tenants.id, tenantId), isNull(tenants.deletedAt)))
+    .limit(1)
+  const row = rows[0]
+  if (!row) throw new TenantNotFoundError(tenantId)
+  return {
+    targetMarkets: row.targetMarkets ?? [],
+    defaultLanguage: row.defaultLanguage as Language,
+    companyProfile: (row.companyProfile ?? {}) as Record<string, unknown>,
+  }
 }
 
 /** Idempotent upsert of a tenant from a Clerk organization. */

@@ -1,6 +1,5 @@
-import { Users } from 'lucide-react'
 import { DegradedBanner } from '@/components/degraded-banner'
-import { EmptyState } from '@/components/empty-state'
+import { LeadsView } from '@/components/leads/leads-view'
 
 export default function LeadsPage() {
   return (
@@ -11,14 +10,8 @@ export default function LeadsPage() {
           Importer companies, deduped and ICP-scored.
         </p>
       </div>
-
       <DegradedBanner />
-
-      <EmptyState
-        icon={Users}
-        title="No leads yet"
-        description="CSV/XLSX import with dedupe and ICP scoring lands in Phase 1 — wiring it up next."
-      />
+      <LeadsView />
     </div>
   )
 }
