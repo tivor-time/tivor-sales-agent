@@ -9,7 +9,8 @@
     ".": "./src/index.ts",
     "./env": "./src/env.ts",
     "./logger": "./src/logger.ts",
-    "./providers": "./src/providers/index.ts"
+    "./providers": "./src/providers/index.ts",
+    "./import": "./src/import/index.ts"
   },
   "scripts": {
     "lint": "eslint .",
@@ -17,11 +18,14 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "papaparse": "^5.4.1",
     "pino": "^9.6.0",
+    "xlsx": "^0.18.5",
     "zod": "^3.24.1"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
+    "@types/papaparse": "^5.3.15",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8"
   }

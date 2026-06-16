@@ -43,6 +43,12 @@ export const eventSchemas = {
     providerMessageId: z.string(),
   }),
   'usage/flush.requested': tenantScoped,
+  'import/file.uploaded': tenantScoped.extend({
+    storageKey: z.string(),
+    fileName: z.string(),
+    kind: z.enum(['csv', 'xlsx']),
+    mapping: z.record(z.number()),
+  }),
 } as const
 
 export type EventName = keyof typeof eventSchemas
