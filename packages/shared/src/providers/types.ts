@@ -32,13 +32,24 @@ export interface EnrichmentProvider extends ProviderInfo {
 
 /** F2/F3 — connected sending + receiving mailbox (Gmail / Microsoft Graph). */
 export interface MailboxProvider extends ProviderInfo {
-  getAuthUrl(state: string): string
-  exchangeCode(code: string): Promise<{
+  /** Build the provider authorize URL. `codeChallenge` is the PKCE S256 challenge. */
+  getAuthUrl(state: string, codeChallenge: string): string
+  /** Exchange an authorization code (+ PKCE verifier) for tokens + the mailbox email. */
+  exchangeCode(
+    code: string,
+    codeVerifier: string,
+  ): Promise<{
     accessToken: string
     refreshToken?: string
     expiresAt?: Date
     email: string
     scopes: string[]
+  }>
+  /** Renew an access token from a refresh token (providers may rotate the refresh token). */
+  refresh?(refreshToken: string): Promise<{
+    accessToken: string
+    refreshToken?: string
+    expiresAt?: Date
   }>
   send(input: {
     accessToken: string

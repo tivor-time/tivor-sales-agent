@@ -13,4 +13,8 @@ export const queryKeys = {
   outreach: {
     pending: ['outreach', 'pending'] as const,
   },
+  mailboxes: {
+    all: ['mailboxes'] as const,
+    dns: (id: string) => ['mailboxes', 'dns', id] as const,
+  },
 } as const

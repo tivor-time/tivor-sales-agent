@@ -10,6 +10,7 @@
     "./env": "./src/env.ts",
     "./logger": "./src/logger.ts",
     "./providers": "./src/providers/index.ts",
+    "./providers/server": "./src/providers/server.ts",
     "./import": "./src/import/index.ts",
     "./outreach": "./src/outreach/index.ts",
     "./deliverability": "./src/deliverability/index.ts"
