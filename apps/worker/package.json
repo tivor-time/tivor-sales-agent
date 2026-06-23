@@ -13,6 +13,7 @@
   "dependencies": {
     "@tradepilot/db": "workspace:*",
     "@tradepilot/shared": "workspace:*",
+    "drizzle-orm": "^0.38.3",
     "inngest": "^4.7.0",
     "tsx": "^4.19.2"
   },
