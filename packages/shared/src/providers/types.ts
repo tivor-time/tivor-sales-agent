@@ -61,6 +61,33 @@ export interface MailboxProvider extends ProviderInfo {
     inReplyTo?: string
     references?: string[]
   }): Promise<{ providerMessageId: string; threadId?: string }>
+  /** Fetch new inbound messages incrementally (cursor stored in providerState). */
+  receive?(input: {
+    accessToken: string
+    providerState: Record<string, unknown>
+    maxMessages?: number
+  }): Promise<ReceiveResult>
+}
+
+/** A normalized inbound email returned by MailboxProvider.receive(). */
+export interface InboundMessage {
+  providerMessageId: string
+  internetMessageId?: string
+  threadId?: string
+  from: string
+  to: string[]
+  subject: string
+  text: string
+  html?: string
+  receivedAt: Date
+  inReplyTo?: string
+  references: string[]
+}
+
+export interface ReceiveResult {
+  messages: InboundMessage[]
+  /** The advanced incremental cursor to persist on the EmailIdentity. */
+  providerState: Record<string, unknown>
 }
 
 /** F4 — post listings where an official API exists; otherwise export-only. */

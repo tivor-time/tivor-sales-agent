@@ -4,18 +4,20 @@
  *
  * Graph's /me/sendMail takes a JSON message object (no raw MIME) and returns 202
  * with an empty body and no id, so we self-assign a Message-ID for our own
- * tracking. NOTE: Graph restricts custom internet message headers, so threading
- * (In-Reply-To/References) + List-Unsubscribe are not yet set here — a follow-up
- * can switch to the MIME upload endpoint if strict threading is required.
+ * tracking. Threading headers are not set on send (Graph restricts custom
+ * internet headers); a follow-up can switch to the MIME upload endpoint.
  */
 import { randomUUID } from 'node:crypto'
 import { env, flags } from '../../env'
-import type { MailboxProvider } from '../types'
+import type { InboundMessage, MailboxProvider } from '../types'
 
 const SCOPE =
-  'openid email offline_access https://graph.microsoft.com/Mail.Send https://graph.microsoft.com/User.Read'
+  'openid email offline_access https://graph.microsoft.com/Mail.Send https://graph.microsoft.com/Mail.Read https://graph.microsoft.com/User.Read'
 const SEND_URL = 'https://graph.microsoft.com/v1.0/me/sendMail'
 const ME_URL = 'https://graph.microsoft.com/v1.0/me'
+const INBOX_DELTA_URL = 'https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages/delta'
+const DELTA_SELECT =
+  '$select=id,internetMessageId,conversationId,subject,from,toRecipients,body,bodyPreview,receivedDateTime,internetMessageHeaders'
 
 function authority(): string {
   return `https://login.microsoftonline.com/${env.MS_GRAPH_TENANT_ID ?? 'common'}`
@@ -30,6 +32,40 @@ function claimFromIdToken(idToken: string | undefined, claim: string): string | 
     return (JSON.parse(Buffer.from(part, 'base64url').toString('utf8')) as Record<string, string>)[claim]
   } catch {
     return undefined
+  }
+}
+
+interface GraphMessage {
+  id: string
+  internetMessageId?: string
+  conversationId?: string
+  subject?: string
+  from?: { emailAddress?: { address?: string } }
+  toRecipients?: { emailAddress?: { address?: string } }[]
+  body?: { contentType?: string; content?: string }
+  bodyPreview?: string
+  receivedDateTime?: string
+  internetMessageHeaders?: { name?: string; value?: string }[]
+  '@removed'?: unknown
+}
+
+function mapGraphMessage(m: GraphMessage): InboundMessage {
+  const headers = m.internetMessageHeaders ?? []
+  const h = (name: string): string | undefined =>
+    headers.find((x) => x.name?.toLowerCase() === name.toLowerCase())?.value
+  const isHtml = m.body?.contentType?.toLowerCase() === 'html'
+  return {
+    providerMessageId: m.id,
+    internetMessageId: m.internetMessageId,
+    threadId: m.conversationId,
+    from: m.from?.emailAddress?.address ?? '',
+    to: (m.toRecipients ?? []).map((r) => r.emailAddress?.address ?? '').filter(Boolean),
+    subject: m.subject ?? '',
+    text: isHtml ? (m.bodyPreview ?? '') : (m.body?.content ?? m.bodyPreview ?? ''),
+    html: isHtml ? m.body?.content : undefined,
+    receivedAt: m.receivedDateTime ? new Date(m.receivedDateTime) : new Date(),
+    inReplyTo: h('In-Reply-To'),
+    references: (h('References') ?? '').split(/\s+/).filter(Boolean),
   }
 }
 
@@ -128,5 +164,48 @@ export const msGraphProvider: MailboxProvider = {
     })
     if (!res.ok) throw new Error(`Microsoft send failed: ${res.status} ${await res.text()}`)
     return { providerMessageId }
+  },
+
+  async receive(input) {
+    const max = input.maxMessages ?? 25
+    const auth = { authorization: `Bearer ${input.accessToken}`, Prefer: 'odata.maxpagesize=25' }
+    const deltaLink = input.providerState?.deltaLink as string | undefined
+    let url = deltaLink ?? `${INBOX_DELTA_URL}?${DELTA_SELECT}`
+    const messages: InboundMessage[] = []
+    let newDelta = deltaLink
+    let pages = 0
+
+    while (url && messages.length < max) {
+      if (++pages > 12) break
+      const res = await fetch(url, { headers: auth })
+      if (!res.ok) {
+        if (res.status === 410) {
+          // stale delta token -> restart from base
+          url = `${INBOX_DELTA_URL}?${DELTA_SELECT}`
+          newDelta = undefined
+          continue
+        }
+        return { messages: [], providerState: input.providerState }
+      }
+      const j = (await res.json()) as {
+        value?: GraphMessage[]
+        '@odata.nextLink'?: string
+        '@odata.deltaLink'?: string
+      }
+      for (const m of j.value ?? []) {
+        if (m['@removed']) continue
+        messages.push(mapGraphMessage(m))
+      }
+      if (j['@odata.deltaLink']) {
+        newDelta = j['@odata.deltaLink']
+        break
+      }
+      url = j['@odata.nextLink'] ?? ''
+    }
+
+    return {
+      messages: messages.slice(0, max),
+      providerState: newDelta ? { deltaLink: newDelta } : {},
+    }
   },
 }
