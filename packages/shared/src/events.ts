@@ -34,6 +34,9 @@ export const eventSchemas = {
   'mailbox/warmup.tick': tenantScoped.extend({
     emailIdentityId: z.string().uuid(),
   }),
+  'mailbox/poll.identity': tenantScoped.extend({
+    emailIdentityId: z.string().uuid(),
+  }),
   'email/bounce.received': tenantScoped.extend({
     messageId: z.string().uuid().optional(),
     address: z.string(),

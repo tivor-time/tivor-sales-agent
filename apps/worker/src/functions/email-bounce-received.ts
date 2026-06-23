@@ -1,15 +1,33 @@
 import { parseEvent } from '@tradepilot/shared'
+import { schema } from '@tradepilot/db'
+import { and, eq } from 'drizzle-orm'
 import { inngest } from '../client'
+import { withTenant } from '../lib/tenant'
 import { eventLogger } from '../lib/logger'
 
 export const EVENT = 'email/bounce.received' as const
 
-/** Pure handler body. Full implementation (suppress address + mark bounced) is P4. */
+const { suppressionEntries } = schema
+
+/** Suppress a hard-bouncing address and mark the referenced message bounced. */
 export async function handleEmailBounceReceived(rawData: unknown, requestId: string): Promise<void> {
   const data = parseEvent(EVENT, rawData)
-  eventLogger(EVENT, data.tenantId, requestId).info(
-    { address: data.address, messageId: data.messageId },
-    'bounce received — handler lands in P4',
+  const log = eventLogger(EVENT, data.tenantId, requestId)
+  await withTenant(
+    { tenantId: data.tenantId, actorUserId: data.actorUserId, requestId },
+    async (ctx) => {
+      const value = data.address.toLowerCase()
+      const existing = await ctx.db.suppressionEntries.findFirst(
+        and(eq(suppressionEntries.scope, 'email'), eq(suppressionEntries.value, value))!,
+      )
+      if (!existing) {
+        await ctx.db.suppressionEntries.insert({ scope: 'email', value, reason: 'hard_bounce' } as never)
+      }
+      if (data.messageId) {
+        await ctx.db.messages.update(data.messageId, { status: 'bounced' })
+      }
+      log.info({ address: value, messageId: data.messageId }, 'bounce processed — address suppressed')
+    },
   )
 }
 

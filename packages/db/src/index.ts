@@ -23,6 +23,7 @@ export {
 export {
   ensureTenant,
   assertTenantExists,
+  listReceivableIdentities,
   getTenantProfile,
   upsertTenantFromClerk,
   upsertUserFromClerk,

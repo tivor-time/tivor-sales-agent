@@ -7,11 +7,11 @@
  * All upserts are idempotent so the webhook + lazy paths coexist safely.
  */
 import { randomUUID } from 'node:crypto'
-import { and, eq, isNull } from 'drizzle-orm'
+import { and, eq, isNull, inArray } from 'drizzle-orm'
 import type { Role, Language } from '@tradepilot/shared'
 import { getDb } from '../client/pool'
 import { withTenantTransaction } from '../client/rls'
-import { tenants, users, memberships } from '../schema'
+import { tenants, users, memberships, emailIdentities } from '../schema'
 import { TenantNotFoundError } from './errors'
 import { makeSecretResolver } from './secrets'
 import type { TenantContextPartial } from './context'
@@ -58,6 +58,31 @@ export async function assertTenantExists(
   const row = rows[0]
   if (!row) throw new TenantNotFoundError(tenantId)
   return row
+}
+
+/**
+ * List every connected (non-deleted) Gmail/Microsoft identity across ALL tenants
+ * — the one narrowly-scoped cross-tenant read the inbound poll cron needs to fan
+ * out per-identity work. Global read (like assertTenantExists); never exposes row
+ * data, only ids the per-identity handler then loads tenant-scoped.
+ */
+export async function listReceivableIdentities(): Promise<
+  { tenantId: string; emailIdentityId: string; provider: string }[]
+> {
+  const db = getDb()
+  return db
+    .select({
+      tenantId: emailIdentities.tenantId,
+      emailIdentityId: emailIdentities.id,
+      provider: emailIdentities.provider,
+    })
+    .from(emailIdentities)
+    .where(
+      and(
+        isNull(emailIdentities.deletedAt),
+        inArray(emailIdentities.provider, ['gmail', 'microsoft']),
+      ),
+    )
 }
 
 /** Read a tenant's profile (target markets, default language, company profile) for
