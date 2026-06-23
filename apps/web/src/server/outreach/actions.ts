@@ -8,6 +8,7 @@ import type { Language } from '@tradepilot/shared'
 import { resolveTenantContext } from '@/lib/auth/resolve-tenant'
 import { requireRole } from '@/lib/auth/roles'
 import { withAction, NotFoundError, type Result } from '@/server/result'
+import { sendEvent } from '@/lib/inngest/client'
 import { generateColdEmail } from '@/lib/ai/draft'
 import { toDraftMessageDTO, type DraftMessageDTO } from './dto'
 import {
@@ -213,17 +214,32 @@ export async function listPendingDrafts(): Promise<Result<DraftMessageDTO[]>> {
   })
 }
 
-/** Approve a draft -> queued (held; sending stays OFF until domain auth verifies). */
+/**
+ * Approve a draft -> queued, then emit `sequence/step.due` so the worker picks it
+ * up. The worker still holds it unless a verified mailbox exists (sending stays
+ * OFF until domain auth verifies). The event is emitted AFTER the tx commits.
+ */
 export async function approveDraft(input: unknown): Promise<Result<{ id: string }>> {
   return withAction(async () => {
     const { id } = messageIdSchema.parse(input)
     const partial = await resolveTenantContext()
-    return runInTenant(partial, async (ctx) => {
+    const row = await runInTenant(partial, async (ctx) => {
       requireRole(ctx, 'admin')
-      const row = await ctx.db.messages.update(id, { status: 'queued' })
-      if (!row) throw new NotFoundError('Draft not found.')
-      return { id }
+      const updated = await ctx.db.messages.update(id, { status: 'queued' })
+      if (!updated) throw new NotFoundError('Draft not found.')
+      return updated
     })
+    if (row.sequenceStepId && row.leadId) {
+      await sendEvent('sequence/step.due', {
+        tenantId: partial.tenantId,
+        actorUserId: partial.userId,
+        messageId: row.id,
+        sequenceStepId: row.sequenceStepId,
+        leadId: row.leadId,
+        contactId: row.contactId ?? undefined,
+      })
+    }
+    return { id }
   })
 }
 
@@ -267,13 +283,28 @@ export async function bulkApproveDrafts(input: unknown): Promise<Result<{ approv
   return withAction(async () => {
     const { ids } = bulkApproveSchema.parse(input)
     const partial = await resolveTenantContext()
-    return runInTenant(partial, async (ctx) => {
+    const rows = await runInTenant(partial, async (ctx) => {
       requireRole(ctx, 'admin')
-      let approved = 0
+      const approved: Awaited<ReturnType<typeof ctx.db.messages.update>>[] = []
       for (const id of ids) {
-        if (await ctx.db.messages.update(id, { status: 'queued' })) approved++
+        const row = await ctx.db.messages.update(id, { status: 'queued' })
+        if (row) approved.push(row)
       }
-      return { approved }
+      return approved
     })
+    // Emit one send event per approved draft, AFTER the tx commits.
+    for (const row of rows) {
+      if (row && row.sequenceStepId && row.leadId) {
+        await sendEvent('sequence/step.due', {
+          tenantId: partial.tenantId,
+          actorUserId: partial.userId,
+          messageId: row.id,
+          sequenceStepId: row.sequenceStepId,
+          leadId: row.leadId,
+          contactId: row.contactId ?? undefined,
+        })
+      }
+    }
+    return { approved: rows.length }
   })
 }
