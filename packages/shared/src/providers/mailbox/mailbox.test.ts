@@ -52,6 +52,18 @@ describe('buildMime', () => {
     expect(encodeHeaderWord('Grüße')).toMatch(/^=\?utf-8\?B\?/)
     expect(encodeHeaderWord('plain ascii')).toBe('plain ascii')
   })
+
+  it('strips CR/LF from header values (prevents header injection)', () => {
+    const mime = buildMime({
+      from: 'a@x.com',
+      to: 'b@y.com\r\nBcc: evil@e.com',
+      subject: 'Hi\r\nX-Injected: yes',
+      text: 't',
+      messageId: '<9@x.com>',
+    })
+    expect(mime).not.toContain('\r\nBcc:')
+    expect(mime).not.toContain('\r\nX-Injected:')
+  })
 })
 
 // --- DNS resolver: mock node:dns/promises so no network is hit ---

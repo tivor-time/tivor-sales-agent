@@ -26,6 +26,7 @@ export async function startOAuth(provider: OAuthProvider): Promise<NextResponse>
   }
   try {
     const partial = await resolveTenantContext()
+    requireRole(partial, 'admin') // only admins may connect a mailbox
     const { verifier, challenge } = newPkce()
     const state = packState({
       tenantId: partial.tenantId,

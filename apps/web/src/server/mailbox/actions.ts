@@ -6,7 +6,7 @@ import { expectedDnsRecords, type DnsRecord } from '@tradepilot/shared/deliverab
 import { resolveDomainAuth, domainFromEmail } from '@tradepilot/shared/providers/server'
 import { resolveTenantContext } from '@/lib/auth/resolve-tenant'
 import { requireRole } from '@/lib/auth/roles'
-import { withAction, NotFoundError, type Result } from '@/server/result'
+import { withAction, NotFoundError, PreconditionError, type Result } from '@/server/result'
 import { toMailboxDTO, type MailboxDTO } from './dto'
 import { mailboxIdSchema, setSendingSchema } from './schemas'
 
@@ -88,7 +88,7 @@ export async function setMailboxSending(input: unknown): Promise<Result<{ id: st
       const row = await ctx.db.emailIdentities.findById(id)
       if (!row) throw new NotFoundError('Mailbox not found.')
       if (enabled && !row.domainVerifiedAt) {
-        throw new NotFoundError('Verify domain authentication before enabling sending.')
+        throw new PreconditionError('Verify domain authentication before enabling sending.')
       }
       await ctx.db.emailIdentities.update(id, { sendingEnabled: enabled })
       return { id }

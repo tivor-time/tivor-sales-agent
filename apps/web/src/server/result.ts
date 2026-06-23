@@ -34,6 +34,14 @@ export class NotFoundError extends Error {
   }
 }
 
+/** Thrown when a business precondition fails (the record exists); mapped to VALIDATION. */
+export class PreconditionError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'PreconditionError'
+  }
+}
+
 function isUniqueViolation(e: unknown): boolean {
   return (e as { code?: string } | undefined)?.code === '23505'
 }
@@ -49,6 +57,9 @@ export async function withAction<T>(fn: () => Promise<T>): Promise<Result<T>> {
   } catch (e) {
     if (e instanceof Error && e.name === 'NotFoundError') {
       return err({ code: 'NOT_FOUND', message: e.message })
+    }
+    if (e instanceof Error && e.name === 'PreconditionError') {
+      return err({ code: 'VALIDATION', message: e.message })
     }
     if (e instanceof ZodError) {
       return err({

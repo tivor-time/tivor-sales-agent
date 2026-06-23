@@ -4,6 +4,11 @@
  * and unit-tested directly. Emits compliance + threading headers.
  */
 
+/** Strip CR/LF so a value can never inject extra headers (header-splitting). */
+function sanitizeHeader(s: string): string {
+  return s.replace(/[\r\n]+/g, ' ')
+}
+
 /** RFC2047-encode a header value if it contains non-ASCII characters. */
 export function encodeHeaderWord(s: string): string {
   const isAscii = [...s].every((c) => c.charCodeAt(0) < 128)
@@ -27,17 +32,19 @@ export interface MimeInput {
 /** Build a complete RFC822 message string (CRLF line endings). */
 export function buildMime(i: MimeInput): string {
   const headers: string[] = [
-    `From: ${i.from}`,
-    `To: ${i.to}`,
-    `Subject: ${encodeHeaderWord(i.subject)}`,
-    `Message-ID: ${i.messageId}`,
+    `From: ${sanitizeHeader(i.from)}`,
+    `To: ${sanitizeHeader(i.to)}`,
+    `Subject: ${encodeHeaderWord(sanitizeHeader(i.subject))}`,
+    `Message-ID: ${sanitizeHeader(i.messageId)}`,
     `Date: ${new Date().toUTCString()}`,
     'MIME-Version: 1.0',
   ]
-  if (i.inReplyTo) headers.push(`In-Reply-To: ${i.inReplyTo}`)
-  if (i.references?.length) headers.push(`References: ${i.references.join(' ')}`)
+  if (i.inReplyTo) headers.push(`In-Reply-To: ${sanitizeHeader(i.inReplyTo)}`)
+  if (i.references?.length) {
+    headers.push(`References: ${i.references.map(sanitizeHeader).join(' ')}`)
+  }
   if (i.listUnsubscribe) {
-    headers.push(`List-Unsubscribe: ${i.listUnsubscribe}`)
+    headers.push(`List-Unsubscribe: ${sanitizeHeader(i.listUnsubscribe)}`)
     headers.push('List-Unsubscribe-Post: List-Unsubscribe=One-Click')
   }
 

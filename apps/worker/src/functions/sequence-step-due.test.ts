@@ -26,8 +26,10 @@ vi.mock('@tradepilot/shared/providers/server', () => ({ getMailboxProvider: m.ge
 vi.mock('drizzle-orm', () => ({
   and: () => ({}),
   eq: () => ({}),
+  gt: () => ({}),
   isNull: () => ({}),
   inArray: () => ({}),
+  or: () => ({}),
   desc: () => ({}),
 }))
 
@@ -79,7 +81,7 @@ function makeCtx(o: { message?: unknown; identity?: unknown; suppressed?: unknow
       update: vi.fn(async () => ({})),
     },
     suppressionEntries: { findMany: vi.fn(async () => o.suppressed ?? []) },
-    usageRecords: { insert: vi.fn(async () => ({})) },
+    usageRecords: { findFirst: vi.fn(async () => null), insert: vi.fn(async () => ({})) },
   }
   return { tenantId: 't', db }
 }
