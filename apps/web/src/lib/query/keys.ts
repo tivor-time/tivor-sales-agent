@@ -1,5 +1,6 @@
 import type { ListLeadsInput } from '@/server/leads/schemas'
 import type { ListInquiriesInput } from '@/server/inquiry/schemas'
+import type { ListFollowUpsInput } from '@/server/followup/schemas'
 
 export const queryKeys = {
   leads: {
@@ -22,5 +23,9 @@ export const queryKeys = {
     all: ['inquiries'] as const,
     list: (input: ListInquiriesInput) => ['inquiries', 'list', input] as const,
     detail: (id: string) => ['inquiries', 'detail', id] as const,
+  },
+  followups: {
+    all: ['followups'] as const,
+    list: (input: ListFollowUpsInput) => ['followups', 'list', input] as const,
   },
 } as const

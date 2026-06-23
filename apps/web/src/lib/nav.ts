@@ -6,7 +6,7 @@ import {
   Package,
   BarChart3,
   ClipboardCheck,
-  Beaker,
+  ListChecks,
   Settings,
   type LucideIcon,
 } from 'lucide-react'
@@ -30,6 +30,6 @@ export const NAV: NavItem[] = [
   { title: 'Inbox', href: '/inbox', icon: Inbox, badgeKey: 'inquiries', phase: 'P4' },
   { title: 'Listings', href: '/listings', icon: Package, phase: 'P6' },
   { title: 'Market Intel', href: '/market', icon: BarChart3, phase: 'P7' },
-  { title: 'Samples & Follow-ups', href: '/samples', icon: Beaker, phase: 'P5' },
+  { title: 'Follow-ups', href: '/follow-ups', icon: ListChecks, phase: 'P5' },
   { title: 'Settings', href: '/settings', icon: Settings, roles: ['owner', 'admin'] },
 ]

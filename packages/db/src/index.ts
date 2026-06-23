@@ -24,6 +24,7 @@ export {
   ensureTenant,
   assertTenantExists,
   listReceivableIdentities,
+  listDueRecurringFollowUps,
   getTenantProfile,
   upsertTenantFromClerk,
   upsertUserFromClerk,

@@ -7,11 +7,11 @@
  * All upserts are idempotent so the webhook + lazy paths coexist safely.
  */
 import { randomUUID } from 'node:crypto'
-import { and, eq, isNull, inArray } from 'drizzle-orm'
+import { and, eq, isNull, inArray, ne, lte, isNotNull } from 'drizzle-orm'
 import type { Role, Language } from '@tradepilot/shared'
 import { getDb } from '../client/pool'
 import { withTenantTransaction } from '../client/rls'
-import { tenants, users, memberships, emailIdentities } from '../schema'
+import { tenants, users, memberships, emailIdentities, followUpTasks } from '../schema'
 import { TenantNotFoundError } from './errors'
 import { makeSecretResolver } from './secrets'
 import type { TenantContextPartial } from './context'
@@ -83,6 +83,31 @@ export async function listReceivableIdentities(): Promise<
         inArray(emailIdentities.provider, ['gmail', 'microsoft']),
       ),
     )
+}
+
+/**
+ * List recurring follow-up tasks that are due across ALL tenants — the one
+ * cross-tenant read the follow-ups sweep cron needs to fan out per-task nudges.
+ * One-off tasks are intentionally excluded (they stay overdue + visible in the
+ * UI; only recurring tasks need rescheduling).
+ */
+export async function listDueRecurringFollowUps(): Promise<
+  { tenantId: string; followUpTaskId: string }[]
+> {
+  const db = getDb()
+  return db
+    .select({ tenantId: followUpTasks.tenantId, followUpTaskId: followUpTasks.id })
+    .from(followUpTasks)
+    .where(
+      and(
+        isNull(followUpTasks.deletedAt),
+        ne(followUpTasks.cadence, 'once'),
+        inArray(followUpTasks.status, ['open', 'in_progress']),
+        isNotNull(followUpTasks.dueDate),
+        lte(followUpTasks.dueDate, new Date()),
+      ),
+    )
+    .limit(500)
 }
 
 /** Read a tenant's profile (target markets, default language, company profile) for
