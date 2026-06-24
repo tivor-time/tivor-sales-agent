@@ -91,6 +91,9 @@ export async function GET(req: NextRequest) {
         dkimStatus: 'pass' as const,
         dmarcStatus: 'pass' as const,
         domainVerifiedAt: new Date(),
+        // A real Gmail/Microsoft mailbox already has sending reputation — skip the
+        // warmup ramp so the send-gate allows it immediately.
+        warmupState: 'active' as const,
       }
 
       if (row) {

@@ -14,8 +14,8 @@ export function ComingSoon({
 }) {
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">{title}</h1>
+      <div className="space-y-1">
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">{title}</h1>
         <p className="text-sm text-muted-foreground">Planned for {phase}.</p>
       </div>
       <EmptyState

@@ -1,4 +1,5 @@
 import { sequenceStepDue } from './sequence-step-due'
+import { scheduledSendsSweep } from './scheduled-sends-sweep'
 import { followupNudgeDue } from './followup-nudge-due'
 import { followupsSweep } from './followups-sweep'
 import { mailboxWarmupTick } from './mailbox-warmup-tick'
@@ -15,6 +16,7 @@ import { unipileAccountStatus } from './unipile-account-status'
  */
 export const functions = [
   sequenceStepDue,
+  scheduledSendsSweep,
   followupNudgeDue,
   followupsSweep,
   mailboxWarmupTick,

@@ -27,6 +27,7 @@ interface PendingDraft {
   language: Language
   stepOrder: number
   stepKind: string
+  dayOffset: number
   subject: string
   bodyText: string
   aiMeta: Record<string, unknown>
@@ -130,6 +131,7 @@ export async function generateCampaignDrafts(
           language: lead.language,
           stepOrder: step.stepOrder,
           stepKind: step.kind,
+          dayOffset: step.dayOffset,
           subject: draft.subject,
           bodyText: draft.bodyText,
           aiMeta: {
@@ -147,8 +149,13 @@ export async function generateCampaignDrafts(
       }
     }
 
+    // Autopilot (per-tenant): when ON, the intro email is queued to send now and
+    // follow-ups are scheduled by cadence — no human approval. High-spam drafts are
+    // never auto-sent; they fall back to the approval queue as a safety net.
+    const autopilot = (data.profile.companyProfile as { autopilot?: boolean }).autopilot === true
+
     // Phase C — persist campaign + sequence + steps + messages (short tx).
-    return runInTenant(partial, async (ctx) => {
+    const result = await runInTenant(partial, async (ctx) => {
       const campaign = await ctx.db.campaigns.insert({
         name,
         status: 'active',
@@ -170,22 +177,49 @@ export async function generateCampaignDrafts(
         } as never)
         stepIdByOrder.set(s.stepOrder, row.id)
       }
-      const values = pending.map((p) => ({
-        campaignId: campaign.id,
-        sequenceStepId: stepIdByOrder.get(p.stepOrder)!,
-        leadId: p.leadId,
-        contactId: p.contactId,
-        direction: 'outbound',
-        status: 'pending_approval',
-        language: p.language,
-        toAddress: p.toAddress,
-        subject: p.subject,
-        bodyText: p.bodyText,
-        aiMeta: p.aiMeta,
-      }))
+      const now = Date.now()
+      const values = pending.map((p) => {
+        const highSpam = p.aiMeta.spamLevel === 'high'
+        const auto = autopilot && !highSpam
+        const isIntro = p.dayOffset <= 0
+        const status = auto ? (isIntro ? 'queued' : 'scheduled') : 'pending_approval'
+        const scheduledAt = auto && !isIntro ? new Date(now + p.dayOffset * 86_400_000) : null
+        return {
+          campaignId: campaign.id,
+          sequenceStepId: stepIdByOrder.get(p.stepOrder)!,
+          leadId: p.leadId,
+          contactId: p.contactId,
+          direction: 'outbound',
+          status,
+          scheduledAt,
+          language: p.language,
+          toAddress: p.toAddress,
+          subject: p.subject,
+          bodyText: p.bodyText,
+          aiMeta: { ...p.aiMeta, autopilot: auto },
+        }
+      })
       const inserted = await ctx.db.messages.insertMany(values as never)
-      return { campaignId: campaign.id, leads: data.leadRows.length, drafts: inserted.length }
+      // Intro emails autopilot queued for immediate send (scheduled follow-ups are
+      // picked up later by the scheduled-sends sweep in the worker).
+      const queued = inserted.filter((m) => m.status === 'queued')
+      return { campaignId: campaign.id, leads: data.leadRows.length, drafts: inserted.length, queued }
     })
+
+    // Emit a send event per auto-queued intro, AFTER the tx commits.
+    for (const row of result.queued) {
+      if (row.sequenceStepId && row.leadId) {
+        await sendEvent('sequence/step.due', {
+          tenantId: partial.tenantId,
+          actorUserId: partial.userId,
+          messageId: row.id,
+          sequenceStepId: row.sequenceStepId,
+          leadId: row.leadId,
+          contactId: row.contactId ?? undefined,
+        })
+      }
+    }
+    return { campaignId: result.campaignId, leads: result.leads, drafts: result.drafts }
   })
 }
 

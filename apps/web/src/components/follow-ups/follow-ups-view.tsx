@@ -1,11 +1,19 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { ClipboardCheck, Database, Plus } from 'lucide-react'
+import {
+  AlertTriangle,
+  CalendarClock,
+  Check,
+  ClipboardCheck,
+  Database,
+  Plus,
+  Repeat,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { EmptyState } from '@/components/empty-state'
-import { TableSkeleton } from '@/components/loading-skeleton'
+import { ListSkeleton } from '@/components/loading-skeleton'
 import { cn } from '@/lib/utils'
 import { useFollowUps, useCreateFollowUp, useUpdateFollowUp } from '@/lib/query/followups'
 import { TASK_STATUSES, type TaskStatus, type ListFollowUpsInput } from '@/server/followup/schemas'
@@ -16,6 +24,23 @@ const STATUS_LABEL: Record<TaskStatus, string> = {
   done: 'Done',
   snoozed: 'Snoozed',
   cancelled: 'Cancelled',
+}
+
+// Status dot color, mapped to semantic feedback tokens.
+const STATUS_DOT: Record<TaskStatus, string> = {
+  open: 'bg-primary',
+  in_progress: 'bg-warning',
+  done: 'bg-success',
+  snoozed: 'bg-muted-foreground/50',
+  cancelled: 'bg-muted-foreground/30',
+}
+
+function formatDue(iso: string) {
+  return new Date(iso).toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  })
 }
 
 export function FollowUpsView() {
@@ -34,47 +59,77 @@ export function FollowUpsView() {
 
   const overdue = (d: string | null) => !!d && new Date(d).getTime() < Date.now()
 
+  function submit() {
+    if (!title.trim() || create.isPending) return
+    create.mutate({ title: title.trim(), dueDate: due || undefined })
+    setTitle('')
+    setDue('')
+  }
+
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <span className="text-sm text-muted-foreground">
-          {rows.length} {rows.length === 1 ? 'task' : 'tasks'}
-        </span>
-        <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <input type="checkbox" checked={showAll} onChange={(e) => setShowAll(e.target.checked)} /> Show all
-        </label>
-      </div>
-      <div className="flex flex-wrap gap-2">
-        <Input
-          placeholder="New follow-up… (e.g. chase reply from Müller GmbH)"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          className="max-w-md"
-        />
-        <Input
-          type="date"
-          value={due}
-          onChange={(e) => setDue(e.target.value)}
-          className="max-w-[10rem]"
-          aria-label="Due date"
-        />
-        <Button
-          size="sm"
-          disabled={!title.trim() || create.isPending}
-          onClick={() => {
-            create.mutate({ title: title.trim(), dueDate: due || undefined })
-            setTitle('')
-            setDue('')
-          }}
-        >
-          <Plus className="h-4 w-4" /> Add
-        </Button>
+    <div className="space-y-5">
+      {/* Composer */}
+      <div className="rounded-xl border bg-card p-4 shadow-sm">
+        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          New follow-up
+        </p>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <Input
+            placeholder="e.g. Chase reply from Müller GmbH"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') submit()
+            }}
+            className="min-w-[16rem] flex-1"
+            aria-label="Follow-up title"
+          />
+          <div className="relative">
+            <CalendarClock className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              type="date"
+              value={due}
+              onChange={(e) => setDue(e.target.value)}
+              className="w-[11rem] pl-8 tabular-nums"
+              aria-label="Due date"
+            />
+          </div>
+          <Button size="default" disabled={!title.trim() || create.isPending} onClick={submit}>
+            <Plus className="h-4 w-4" /> Add task
+          </Button>
+        </div>
       </div>
 
+      {/* Toolbar: count + filter */}
+      <div className="flex items-center justify-between">
+        <span className="text-sm text-muted-foreground">
+          <span className="font-medium tabular-nums text-foreground">{rows.length}</span>{' '}
+          {rows.length === 1 ? 'task' : 'tasks'}
+        </span>
+        <button
+          type="button"
+          onClick={() => setShowAll((v) => !v)}
+          aria-pressed={showAll}
+          className={cn(
+            'rounded-full border px-3 py-1 text-xs font-medium transition-colors',
+            showAll
+              ? 'border-primary bg-primary/10 text-primary'
+              : 'border-border text-muted-foreground hover:bg-muted hover:text-foreground',
+          )}
+        >
+          {showAll ? 'Showing all statuses' : 'Active only'}
+        </button>
+      </div>
+
+      {/* Body */}
       {code === 'DB_UNAVAILABLE' ? (
-        <EmptyState icon={Database} title="Connect a database" description="Set DATABASE_URL to track follow-ups." />
+        <EmptyState
+          icon={Database}
+          title="Connect a database"
+          description="Set DATABASE_URL to track follow-ups."
+        />
       ) : isLoading ? (
-        <TableSkeleton rows={4} cols={1} />
+        <ListSkeleton rows={4} />
       ) : isError ? (
         <EmptyState title="Couldn’t load follow-ups" description={(error as Error)?.message} />
       ) : rows.length === 0 ? (
@@ -84,42 +139,120 @@ export function FollowUpsView() {
           description="Add a task to stay on top of buyers — chase replies, schedule check-ins, set recurring nudges."
         />
       ) : (
-        <div className="divide-y rounded-lg border">
-          {rows.map((t) => (
-            <div key={t.id} className="flex flex-wrap items-center gap-3 p-3">
-              <div className="min-w-0 flex-1">
-                <div className="font-medium">{t.title}</div>
-                <div className="text-xs text-muted-foreground">
-                  {t.leadCompany ? `${t.leadCompany} · ` : ''}
-                  {t.dueDate ? (
-                    <span className={cn(overdue(t.dueDate) && t.status !== 'done' && 'text-destructive')}>
-                      due {new Date(t.dueDate).toLocaleDateString()}
-                    </span>
-                  ) : (
-                    'no due date'
-                  )}
-                  {t.cadence !== 'once' ? ` · ${t.cadence}` : ''}
+        <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
+          <div className="divide-y divide-border">
+            {rows.map((t) => {
+              const isOverdue = overdue(t.dueDate) && t.status !== 'done' && t.status !== 'cancelled'
+              const isDone = t.status === 'done'
+              return (
+                <div
+                  key={t.id}
+                  className="group flex flex-wrap items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/40"
+                >
+                  {/* Status dot */}
+                  <span
+                    className={cn('h-2 w-2 shrink-0 rounded-full', STATUS_DOT[t.status])}
+                    aria-hidden
+                  />
+
+                  {/* Title + meta */}
+                  <div className="min-w-0 flex-1">
+                    <div
+                      className={cn(
+                        'truncate text-sm font-medium text-foreground',
+                        isDone && 'text-muted-foreground line-through',
+                      )}
+                    >
+                      {t.title}
+                    </div>
+                    <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+                      {t.leadCompany ? (
+                        <>
+                          <span className="truncate text-foreground/80">{t.leadCompany}</span>
+                          <span aria-hidden className="text-border">
+                            ·
+                          </span>
+                        </>
+                      ) : null}
+                      {t.dueDate ? (
+                        <span
+                          className={cn(
+                            'inline-flex items-center gap-1 tabular-nums',
+                            isOverdue && 'font-medium text-destructive',
+                          )}
+                        >
+                          {isOverdue ? (
+                            <AlertTriangle className="h-3.5 w-3.5" />
+                          ) : (
+                            <CalendarClock className="h-3.5 w-3.5" />
+                          )}
+                          {isOverdue ? 'Overdue · ' : 'Due '}
+                          {formatDue(t.dueDate)}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground/70">No due date</span>
+                      )}
+                      {t.cadence !== 'once' ? (
+                        <>
+                          <span aria-hidden className="text-border">
+                            ·
+                          </span>
+                          <span className="inline-flex items-center gap-1 capitalize">
+                            <Repeat className="h-3.5 w-3.5" />
+                            {t.cadence}
+                          </span>
+                        </>
+                      ) : null}
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex shrink-0 items-center gap-2">
+                    <div className="relative">
+                      <select
+                        className="h-8 cursor-pointer appearance-none rounded-md border border-input bg-background py-0 pl-2.5 pr-7 text-xs font-medium text-foreground transition-colors hover:border-foreground/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background"
+                        value={t.status}
+                        onChange={(e) =>
+                          update.mutate({ id: t.id, status: e.target.value as TaskStatus })
+                        }
+                        aria-label={`Status for ${t.title}`}
+                      >
+                        {TASK_STATUSES.map((st) => (
+                          <option key={st} value={st}>
+                            {STATUS_LABEL[st]}
+                          </option>
+                        ))}
+                      </select>
+                      <svg
+                        aria-hidden
+                        viewBox="0 0 12 12"
+                        className="pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground"
+                      >
+                        <path
+                          d="M3 4.5 6 7.5 9 4.5"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </div>
+                    {!isDone && t.status !== 'cancelled' ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => update.mutate({ id: t.id, status: 'done' })}
+                        aria-label={`Mark ${t.title} done`}
+                      >
+                        <Check className="h-4 w-4" /> Done
+                      </Button>
+                    ) : null}
+                  </div>
                 </div>
-              </div>
-              <select
-                className="h-8 rounded-md border border-input bg-background px-2 text-xs"
-                value={t.status}
-                onChange={(e) => update.mutate({ id: t.id, status: e.target.value as TaskStatus })}
-                aria-label="Task status"
-              >
-                {TASK_STATUSES.map((st) => (
-                  <option key={st} value={st}>
-                    {STATUS_LABEL[st]}
-                  </option>
-                ))}
-              </select>
-              {t.status !== 'done' && (
-                <Button size="sm" variant="outline" onClick={() => update.mutate({ id: t.id, status: 'done' })}>
-                  Done
-                </Button>
-              )}
-            </div>
-          ))}
+              )
+            })}
+          </div>
         </div>
       )}
     </div>

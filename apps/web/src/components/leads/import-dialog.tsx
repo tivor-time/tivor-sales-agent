@@ -142,9 +142,13 @@ export function ImportDialog({ onImported, children }: { onImported?: () => void
         </DialogHeader>
 
         {step === 'upload' && (
-          <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed p-10 text-center hover:bg-muted/40">
-            <Upload className="h-7 w-7 text-muted-foreground" />
-            <span className="text-sm font-medium">Click to choose a CSV or XLSX file</span>
+          <label className="group flex cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-muted/30 p-12 text-center transition-colors hover:border-primary/40 hover:bg-muted/50">
+            <span className="grid h-12 w-12 place-items-center rounded-full bg-muted text-muted-foreground transition-colors group-hover:bg-primary/10 group-hover:text-primary">
+              <Upload className="h-5 w-5" />
+            </span>
+            <span className="text-sm font-medium text-foreground">
+              Click to choose a CSV or XLSX file
+            </span>
             <span className="text-xs text-muted-foreground">
               {pending ? 'Reading file…' : 'Up to ~50,000 rows'}
             </span>
@@ -164,19 +168,22 @@ export function ImportDialog({ onImported, children }: { onImported?: () => void
         {step === 'map' && preview && (
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              {preview.rowCount.toLocaleString()} rows detected
+              <span className="font-medium text-foreground tabular-nums">
+                {preview.rowCount.toLocaleString()}
+              </span>{' '}
+              rows detected
               {preview.truncated ? ' (truncated to the row cap)' : ''}. Match your columns:
             </p>
-            <div className="grid max-h-[40svh] grid-cols-1 gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
+            <div className="grid max-h-[40svh] grid-cols-1 gap-x-4 gap-y-2.5 overflow-y-auto rounded-lg border bg-muted/20 p-3 pr-2 sm:grid-cols-2">
               {FIELDS.map((f) => (
                 <div key={f.key} className="flex items-center justify-between gap-2">
-                  <Label className="flex-1 truncate" htmlFor={`map-${f.key}`}>
+                  <Label className="flex-1 truncate text-muted-foreground" htmlFor={`map-${f.key}`}>
                     {f.label}
                     {f.required ? <span className="text-destructive"> *</span> : null}
                   </Label>
                   <select
                     id={`map-${f.key}`}
-                    className="h-9 w-40 rounded-md border border-input bg-background px-2 text-sm"
+                    className="h-9 w-40 rounded-md border border-input bg-background px-2 text-sm ring-offset-background transition-colors hover:border-foreground/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
                     value={mapping[f.key] ?? ''}
                     onChange={(e) => {
                       const v = e.target.value
@@ -210,17 +217,19 @@ export function ImportDialog({ onImported, children }: { onImported?: () => void
         )}
 
         {step === 'running' && (
-          <div className="flex flex-col items-center gap-3 p-8 text-center">
-            <Loader2 className="h-7 w-7 animate-spin text-primary" />
+          <div className="flex flex-col items-center gap-3 p-10 text-center">
+            <span className="grid h-12 w-12 place-items-center rounded-full bg-primary/10 text-primary">
+              <Loader2 className="h-5 w-5 animate-spin" />
+            </span>
             <p className="text-sm text-muted-foreground">Importing, deduping, and scoring…</p>
           </div>
         )}
 
         {step === 'done' && report && (
           <div className="space-y-4">
-            <div className="flex items-center gap-2 text-success">
-              <CheckCircle2 className="h-5 w-5" />
-              <span className="font-medium">Import complete</span>
+            <div className="flex items-center gap-2.5 rounded-lg border border-success/30 bg-success/10 px-3 py-2.5 text-success">
+              <CheckCircle2 className="h-5 w-5 shrink-0" />
+              <span className="text-sm font-medium">Import complete</span>
             </div>
             <div className="grid grid-cols-3 gap-3 text-center">
               <Stat label="Created" value={report.created} />
@@ -249,9 +258,11 @@ export function ImportDialog({ onImported, children }: { onImported?: () => void
 
 function Stat({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-md border p-3">
-      <div className="text-xl font-semibold tabular-nums">{value}</div>
-      <div className="text-xs text-muted-foreground">{label}</div>
+    <div className="rounded-lg border bg-card p-3">
+      <div className="text-2xl font-semibold tabular-nums tracking-tight">{value}</div>
+      <div className="mt-0.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        {label}
+      </div>
     </div>
   )
 }

@@ -1,6 +1,11 @@
+import { PageContainer } from '@/components/shell/page-container'
 import { LeadDetail } from '@/components/leads/lead-detail'
 
 export default async function LeadDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  return <LeadDetail id={id} />
+  return (
+    <PageContainer>
+      <LeadDetail id={id} />
+    </PageContainer>
+  )
 }

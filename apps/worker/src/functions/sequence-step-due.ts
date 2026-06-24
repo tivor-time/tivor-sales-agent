@@ -44,8 +44,10 @@ export async function handleSequenceStepDue(rawData: unknown, requestId: string)
   // --- tx1: load + gate + CLAIM (queued -> sending). Commits BEFORE any send. ---
   const claim = await runInTenant(partial, async (ctx) => {
     const message = await ctx.db.messages.findById(messageId)
-    if (!message || message.status !== 'queued') {
-      log.info({ messageId, status: message?.status }, 'skip: message not queued')
+    // 'queued' = approved/intro; 'scheduled' = an autopilot follow-up the sweep has
+    // determined is now due. Both are claimable; anything else (sent/sending) is skipped.
+    if (!message || (message.status !== 'queued' && message.status !== 'scheduled')) {
+      log.info({ messageId, status: message?.status }, 'skip: message not sendable')
       return null
     }
     if (!message.toAddress) {

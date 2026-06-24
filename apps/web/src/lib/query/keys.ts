@@ -37,4 +37,7 @@ export const queryKeys = {
   analytics: {
     report: (rangeDays: AnalyticsRangeDays) => ['analytics', 'report', rangeDays] as const,
   },
+  settings: {
+    autopilot: ['settings', 'autopilot'] as const,
+  },
 } as const
