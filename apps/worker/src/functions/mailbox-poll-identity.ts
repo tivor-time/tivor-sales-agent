@@ -1,5 +1,5 @@
 import { parseEvent } from '@tradepilot/shared'
-import { getMailboxProvider } from '@tradepilot/shared/providers/server'
+import { getMailboxProviderForIdentity } from '@tradepilot/shared/providers/server'
 import { decrypt, encrypt, runInTenant, schema } from '@tradepilot/db'
 import { and, eq } from 'drizzle-orm'
 import { inngest } from '../client'
@@ -34,7 +34,7 @@ export async function handleMailboxPollIdentity(rawData: unknown, requestId: str
     log.info({ emailIdentityId: data.emailIdentityId }, 'identity gone — skipping poll')
     return
   }
-  const provider = getMailboxProvider(identity.provider as 'gmail' | 'microsoft')
+  const provider = getMailboxProviderForIdentity(identity)
   if (!provider.receive) return // unconfigured / no inbound support
 
   // Token decrypt + refresh OUTSIDE any tx.

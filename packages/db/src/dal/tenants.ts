@@ -7,11 +7,11 @@
  * All upserts are idempotent so the webhook + lazy paths coexist safely.
  */
 import { randomUUID } from 'node:crypto'
-import { and, eq, isNull, inArray } from 'drizzle-orm'
+import { and, eq, isNull, inArray, ne, lte, isNotNull, or, sql } from 'drizzle-orm'
 import type { Role, Language } from '@tradepilot/shared'
 import { getDb } from '../client/pool'
 import { withTenantTransaction } from '../client/rls'
-import { tenants, users, memberships, emailIdentities } from '../schema'
+import { tenants, users, memberships, emailIdentities, followUpTasks } from '../schema'
 import { TenantNotFoundError } from './errors'
 import { makeSecretResolver } from './secrets'
 import type { TenantContextPartial } from './context'
@@ -80,9 +80,69 @@ export async function listReceivableIdentities(): Promise<
     .where(
       and(
         isNull(emailIdentities.deletedAt),
-        inArray(emailIdentities.provider, ['gmail', 'microsoft']),
+        or(
+          // Direct-OAuth Gmail/Microsoft (no Unipile link).
+          and(
+            inArray(emailIdentities.provider, ['gmail', 'microsoft']),
+            sql`${emailIdentities.providerState} ->> 'unipileAccountId' is null`,
+          ),
+          // Any Unipile-linked mailbox (synced via the Unipile adapter's receive()).
+          sql`${emailIdentities.providerState} ->> 'unipileAccountId' is not null`,
+        ),
       ),
     )
+}
+
+/**
+ * Resolve a Unipile account_id to the connected EmailIdentity across tenants.
+ * Used by public webhook endpoints (which do not carry tenant auth context).
+ */
+export async function findIdentityByUnipileAccountId(accountId: string): Promise<{
+  tenantId: string
+  emailIdentityId: string
+  provider: string
+} | null> {
+  const db = getDb()
+  const rows = await db
+    .select({
+      tenantId: emailIdentities.tenantId,
+      emailIdentityId: emailIdentities.id,
+      provider: emailIdentities.provider,
+    })
+    .from(emailIdentities)
+    .where(
+      and(
+        isNull(emailIdentities.deletedAt),
+        sql`${emailIdentities.providerState} ->> 'unipileAccountId' = ${accountId}`,
+      ),
+    )
+    .limit(1)
+  return rows[0] ?? null
+}
+
+/**
+ * List recurring follow-up tasks that are due across ALL tenants — the one
+ * cross-tenant read the follow-ups sweep cron needs to fan out per-task nudges.
+ * One-off tasks are intentionally excluded (they stay overdue + visible in the
+ * UI; only recurring tasks need rescheduling).
+ */
+export async function listDueRecurringFollowUps(): Promise<
+  { tenantId: string; followUpTaskId: string }[]
+> {
+  const db = getDb()
+  return db
+    .select({ tenantId: followUpTasks.tenantId, followUpTaskId: followUpTasks.id })
+    .from(followUpTasks)
+    .where(
+      and(
+        isNull(followUpTasks.deletedAt),
+        ne(followUpTasks.cadence, 'once'),
+        inArray(followUpTasks.status, ['open', 'in_progress']),
+        isNotNull(followUpTasks.dueDate),
+        lte(followUpTasks.dueDate, new Date()),
+      ),
+    )
+    .limit(500)
 }
 
 /** Read a tenant's profile (target markets, default language, company profile) for

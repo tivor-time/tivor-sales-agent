@@ -10,6 +10,7 @@ import {
   verifyDomainAuth,
   setMailboxSending,
   disconnectMailbox,
+  syncInbox,
 } from '@/server/mailbox/actions'
 
 interface ActionThrown extends Error {
@@ -53,6 +54,25 @@ export function useSetMailboxSending() {
     onSuccess: (_r, v) => toast.success(v.enabled ? 'Sending enabled' : 'Sending paused'),
     onError: (e: ActionThrown) => toast.error(e.message),
     onSettled: () => qc.invalidateQueries({ queryKey: queryKeys.mailboxes.all }),
+  })
+}
+
+export function useSyncInbox() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async () => unwrap(await syncInbox()),
+    onSuccess: (r) =>
+      r.mailboxes === 0
+        ? toast.info('No connected mailboxes to sync yet.')
+        : r.fetched > 0
+          ? toast.success(`Synced ${r.fetched} new email(s).`)
+          : toast.success('Inbox is up to date.'),
+    onError: (e: ActionThrown) => toast.error(e.message),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.mailboxes.all })
+      qc.invalidateQueries({ queryKey: queryKeys.outreach.activity })
+      qc.invalidateQueries({ queryKey: queryKeys.inbox.all })
+    },
   })
 }
 

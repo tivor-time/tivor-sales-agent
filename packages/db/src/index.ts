@@ -24,6 +24,8 @@ export {
   ensureTenant,
   assertTenantExists,
   listReceivableIdentities,
+  findIdentityByUnipileAccountId,
+  listDueRecurringFollowUps,
   getTenantProfile,
   upsertTenantFromClerk,
   upsertUserFromClerk,

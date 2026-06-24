@@ -7,6 +7,7 @@ export interface SendGateInput {
   spf: DnsVerification
   dkim: DnsVerification
   dmarc: DnsVerification
+  allowUnverifiedDomainAuth?: boolean
   warmupState: WarmupState
   sentToday: number
   dailyCap: number
@@ -24,7 +25,7 @@ export interface SendGate {
 export function canSend(i: SendGateInput): SendGate {
   if (!i.tenantSendingEnabled) return { allowed: false, reason: 'Sending is disabled for this workspace.' }
   if (!i.identitySendingEnabled) return { allowed: false, reason: 'Mailbox sending is off.' }
-  if (!(i.spf === 'pass' && i.dkim === 'pass' && i.dmarc === 'pass')) {
+  if (!(i.spf === 'pass' && i.dkim === 'pass' && i.dmarc === 'pass') && !i.allowUnverifiedDomainAuth) {
     return { allowed: false, reason: 'Domain authentication (SPF/DKIM/DMARC) is not verified.' }
   }
   if (!canWarmupSend(i.warmupState)) {

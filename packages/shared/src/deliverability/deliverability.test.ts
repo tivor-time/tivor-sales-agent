@@ -68,6 +68,9 @@ describe('send gate', () => {
   it('blocks until domain auth verifies', () => {
     expect(canSend({ ...ok, dkim: 'fail' }).allowed).toBe(false)
   })
+  it('allows send when domain auth bypass is enabled', () => {
+    expect(canSend({ ...ok, dkim: 'fail', allowUnverifiedDomainAuth: true }).allowed).toBe(true)
+  })
   it('blocks at the daily cap', () => {
     expect(canSend({ ...ok, sentToday: 20 }).allowed).toBe(false)
   })

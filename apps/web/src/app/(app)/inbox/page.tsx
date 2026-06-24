@@ -1,17 +1,18 @@
 import { DegradedBanner } from '@/components/degraded-banner'
-import { InboxView } from '@/components/inbox/inbox-view'
+import { MailInboxView } from '@/components/inbox/mail-inbox-view'
 
 export default function InboxPage() {
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div>
         <h1 className="text-2xl font-semibold">Inbox</h1>
         <p className="text-sm text-muted-foreground">
-          Inbound buyer inquiries, classified by intent and BANT. Reply, ignore, or jump to the lead.
+          All received mail from your connected mailboxes. AI tags buyer intent and ICP fit as it
+          triages replies.
         </p>
       </div>
       <DegradedBanner />
-      <InboxView />
+      <MailInboxView />
     </div>
   )
 }

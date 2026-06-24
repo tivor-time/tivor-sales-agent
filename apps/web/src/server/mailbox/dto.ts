@@ -8,6 +8,8 @@ export interface MailboxDTO {
   provider: Row['provider']
   email: string
   displayName: string | null
+  connectedViaUnipile: boolean
+  unipileStatus: string | null
   spfStatus: Row['spfStatus']
   dkimStatus: Row['dkimStatus']
   dmarcStatus: Row['dmarcStatus']
@@ -20,11 +22,14 @@ export interface MailboxDTO {
 }
 
 export function toMailboxDTO(r: Row): MailboxDTO {
+  const state = (r.providerState ?? {}) as Record<string, unknown>
   return {
     id: r.id,
     provider: r.provider,
     email: r.email,
     displayName: r.displayName,
+    connectedViaUnipile: typeof state.unipileAccountId === 'string' && state.unipileAccountId.length > 0,
+    unipileStatus: typeof state.unipileStatus === 'string' ? state.unipileStatus : null,
     spfStatus: r.spfStatus,
     dkimStatus: r.dkimStatus,
     dmarcStatus: r.dmarcStatus,

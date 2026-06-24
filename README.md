@@ -17,7 +17,7 @@ selling to DE/ES/FR/PL.
 - **DB:** PostgreSQL (Supabase) + Drizzle ORM (typed migrations), `tenant_id` on every row
 - **Jobs:** Inngest (durable, idempotent, retryable)
 - **Auth + multi-tenancy:** Clerk Organizations (org = tenant)
-- **AI:** Anthropic Claude
+- **AI:** OpenAI (Anthropic optional fallback)
 - **Email:** Gmail API + Microsoft Graph (OAuth) · Resend (transactional)
 - **Payments:** Stripe (plans + metered usage)
 - **Hosting:** Vercel (web) · Railway (worker) · Supabase (db) · Upstash (Redis)
@@ -57,7 +57,8 @@ Every mutating DAL call writes an `AuditEvent` in the same transaction.
 The app **boots and is demoable with zero secrets configured.** Each provider key maps to a feature
 flag (`packages/shared/src/env.ts`); absence flips the feature off rather than crashing. See
 [.env.example](.env.example) for the full matrix. Notably, **sending stays OFF until domain auth
-(SPF/DKIM/DMARC) verifies**, even when mail provider keys are present.
+(SPF/DKIM/DMARC) verifies**, even when mail provider keys are present. For controlled beta only,
+set `ALLOW_UNVERIFIED_SENDING=true` to bypass this gate temporarily.
 
 ## Getting started
 
@@ -76,6 +77,32 @@ pnpm db:generate        # diff schema -> SQL migrations (committed)
 pnpm db:migrate         # apply migrations
 pnpm db:seed            # seed the Sri Durga Agro Exports reference tenant
 ```
+
+## Unipile production setup
+
+Set these env vars in your deployment:
+
+- `UNIPILE_DSN`
+- `UNIPILE_API_KEY`
+- `UNIPILE_WEBHOOK_SECRET`
+- `MASTER_ENCRYPTION_KEY`
+
+Primary connect flow:
+
+- Settings uses `GET /api/oauth/unipile/start` (Hosted Auth link generation server-side only).
+- Hosted Auth `notify_url` should target `/api/webhooks/unipile/notify`.
+
+Webhook endpoints:
+
+- Mailing events: `POST /api/webhooks/unipile/mailing` (`mail_received`, `mail_sent`, `mail_moved`)
+- Account lifecycle: `POST /api/webhooks/unipile/account`
+
+Both webhook endpoints validate `Unipile-Auth` against `UNIPILE_WEBHOOK_SECRET`.
+
+Callback URL guidance:
+
+- Local: point Unipile webhook/callback URLs to your Cloudflare tunnel HTTPS URL.
+- Staging/Production: use fixed HTTPS app domains and keep webhook secrets distinct per environment.
 
 ## Build phases
 

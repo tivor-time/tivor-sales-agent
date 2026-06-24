@@ -3,10 +3,9 @@ import {
   Users,
   Send,
   Inbox,
-  Package,
   BarChart3,
   ClipboardCheck,
-  Beaker,
+  ListChecks,
   Settings,
   type LucideIcon,
 } from 'lucide-react'
@@ -25,11 +24,10 @@ export interface NavItem {
 export const NAV: NavItem[] = [
   { title: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { title: 'Leads', href: '/leads', icon: Users },
-  { title: 'Campaigns', href: '/campaigns', icon: Send, phase: 'P2' },
-  { title: 'Approval Queue', href: '/approvals', icon: ClipboardCheck, badgeKey: 'approvals', phase: 'P2' },
-  { title: 'Inbox', href: '/inbox', icon: Inbox, badgeKey: 'inquiries', phase: 'P4' },
-  { title: 'Listings', href: '/listings', icon: Package, phase: 'P6' },
-  { title: 'Market Intel', href: '/market', icon: BarChart3, phase: 'P7' },
-  { title: 'Samples & Follow-ups', href: '/samples', icon: Beaker, phase: 'P5' },
+  { title: 'Campaigns', href: '/campaigns', icon: Send },
+  { title: 'Approval Queue', href: '/approvals', icon: ClipboardCheck, badgeKey: 'approvals' },
+  { title: 'Inbox', href: '/inbox', icon: Inbox, badgeKey: 'inquiries' },
+  { title: 'Follow-ups', href: '/follow-ups', icon: ListChecks },
+  { title: 'Analytics', href: '/analytics', icon: BarChart3 },
   { title: 'Settings', href: '/settings', icon: Settings, roles: ['owner', 'admin'] },
 ]

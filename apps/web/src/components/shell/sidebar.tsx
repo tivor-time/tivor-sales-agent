@@ -46,7 +46,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         </nav>
       </div>
       <div className="border-t p-3 text-xs text-muted-foreground">
-        Sending OFF until domain auth verified
+        Connect Gmail to start sending
       </div>
     </div>
   )
