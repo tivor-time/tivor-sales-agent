@@ -1,12 +1,13 @@
 'use client'
 
 import Link from 'next/link'
-import { ArrowLeft, Globe, Mail, MapPin, Database, History, User, Building2 } from 'lucide-react'
+import { ArrowLeft, Globe, Mail, MapPin, Database, History, User, Building2, Target, Users } from 'lucide-react'
 import { useLead, useUpdateLeadStage } from '@/lib/query/leads'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/empty-state'
+import { IconTile, SectionHeading } from '@/components/ui/stat'
 import { cn } from '@/lib/utils'
 import { IcpScore, StageDot, StagePill, LEAD_STAGES, STAGE_LABELS } from './stage'
 
@@ -69,9 +70,7 @@ export function LeadDetail({ id }: { id: string }) {
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex items-start gap-3">
-          <div className="mt-0.5 grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
-            <Building2 className="h-5 w-5" />
-          </div>
+          <IconTile icon={Building2} tone="primary" size="lg" className="mt-0.5" />
           <div className="space-y-1.5">
             <div className="flex flex-wrap items-center gap-2.5">
               <h1 className="text-2xl font-semibold tracking-tight">{lead.companyName}</h1>
@@ -124,17 +123,19 @@ export function LeadDetail({ id }: { id: string }) {
         {/* ICP */}
         <Card>
           <CardHeader>
-            <CardTitle>
-              <SectionLabel>ICP score</SectionLabel>
-            </CardTitle>
+            <SectionHeading icon={Target} iconTone="primary">
+              ICP score
+            </SectionHeading>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-end gap-3">
-              <div className="text-4xl font-semibold tabular-nums tracking-tight">
+            <div className="flex items-end gap-2">
+              <div className="font-mono text-4xl font-semibold tabular-nums tracking-tight">
                 {lead.icpScore ?? '—'}
               </div>
               {lead.icpScore != null && (
-                <span className="pb-1.5 text-sm text-muted-foreground">/ 100</span>
+                <span className="pb-1.5 font-mono text-sm tabular-nums text-muted-foreground">
+                  / 100
+                </span>
               )}
             </div>
             <IcpScore score={lead.icpScore} />
@@ -154,12 +155,17 @@ export function LeadDetail({ id }: { id: string }) {
         {/* Contacts */}
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <SectionLabel>Contacts</SectionLabel>
-              <span className="rounded-full bg-muted px-1.5 py-0.5 text-xs font-medium tabular-nums text-muted-foreground">
-                {contacts.length}
-              </span>
-            </CardTitle>
+            <SectionHeading
+              icon={Users}
+              iconTone="sky"
+              action={
+                <span className="rounded-full bg-muted px-1.5 py-0.5 font-mono text-xs font-medium tabular-nums text-muted-foreground">
+                  {contacts.length}
+                </span>
+              }
+            >
+              Contacts
+            </SectionHeading>
           </CardHeader>
           <CardContent>
             {contacts.length === 0 ? (
@@ -210,10 +216,9 @@ export function LeadDetail({ id }: { id: string }) {
       {/* Activity timeline */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <History className="h-4 w-4 text-muted-foreground" />
-            <SectionLabel>Activity</SectionLabel>
-          </CardTitle>
+          <SectionHeading icon={History} iconTone="violet">
+            Activity
+          </SectionHeading>
         </CardHeader>
         <CardContent>
           {activity.length === 0 ? (
@@ -229,7 +234,7 @@ export function LeadDetail({ id }: { id: string }) {
                   />
                   <div className="space-y-0.5 pb-0.5">
                     <div className="text-foreground">{a.summary}</div>
-                    <div className="text-xs tabular-nums text-muted-foreground">
+                    <div className="font-mono text-xs tabular-nums text-muted-foreground">
                       {new Date(a.at).toLocaleString()}
                     </div>
                   </div>

@@ -1,10 +1,11 @@
 'use client'
 
 import Link from 'next/link'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Mail, Sparkles } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { IconTile, SectionHeading } from '@/components/ui/stat'
 import { EmptyState } from '@/components/empty-state'
 import { useInquiry, useSetInquiryStatus } from '@/lib/query/inquiries'
 
@@ -47,9 +48,9 @@ export function InquiryDetail({ id, onBack }: { id: string; onBack: () => void }
           <div className="grid gap-4 lg:grid-cols-[1fr_300px]">
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                <SectionHeading icon={Mail} iconTone="muted">
                   Message
-                </CardTitle>
+                </SectionHeading>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="text-xs text-muted-foreground">
@@ -57,9 +58,14 @@ export function InquiryDetail({ id, onBack }: { id: string; onBack: () => void }
                   <span className="font-medium text-foreground">
                     {data.message?.fromAddress ?? 'unknown'}
                   </span>
-                  {data.message?.receivedAt
-                    ? ` · ${new Date(data.message.receivedAt).toLocaleString()}`
-                    : ''}
+                  {data.message?.receivedAt ? (
+                    <>
+                      {' · '}
+                      <span className="font-mono tabular-nums">
+                        {new Date(data.message.receivedAt).toLocaleString()}
+                      </span>
+                    </>
+                  ) : null}
                 </div>
                 <pre className="max-h-72 overflow-auto whitespace-pre-wrap rounded-lg border bg-muted/30 p-4 text-sm leading-relaxed text-foreground/90 scrollbar-thin">
                   {data.message?.bodyText || '(no content)'}
@@ -69,17 +75,22 @@ export function InquiryDetail({ id, onBack }: { id: string; onBack: () => void }
 
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                <SectionHeading icon={Sparkles} iconTone="primary">
                   AI classification
-                </CardTitle>
+                </SectionHeading>
               </CardHeader>
               <CardContent className="space-y-4">
                 {data.inquiry.icpScore != null && (
-                  <div className="rounded-xl border bg-muted/30 p-4">
-                    <div className="text-3xl font-semibold tabular-nums text-foreground">
-                      {data.inquiry.icpScore}
+                  <div className="flex items-center gap-3 rounded-xl border border-primary/20 bg-primary/[0.04] p-4">
+                    <IconTile icon={Sparkles} tone="primary" size="lg" />
+                    <div className="min-w-0">
+                      <div className="font-mono text-3xl font-bold tabular-nums leading-none tracking-tight text-foreground">
+                        {data.inquiry.icpScore}
+                      </div>
+                      <div className="mt-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                        ICP score
+                      </div>
                     </div>
-                    <div className="text-xs text-muted-foreground">ICP score</div>
                   </div>
                 )}
                 <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
@@ -92,7 +103,7 @@ export function InquiryDetail({ id, onBack }: { id: string; onBack: () => void }
                     ] as const
                   ).map(([label, value]) => (
                     <div key={label} className="min-w-0 space-y-0.5">
-                      <dt className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                      <dt className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
                         {label}
                       </dt>
                       <dd className="text-sm text-foreground">{value ?? '—'}</dd>
@@ -101,7 +112,7 @@ export function InquiryDetail({ id, onBack }: { id: string; onBack: () => void }
                 </dl>
                 {data.inquiry.requestedProducts.length > 0 && (
                   <div className="space-y-1.5">
-                    <div className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                    <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
                       Requested products
                     </div>
                     <div className="flex flex-wrap gap-1.5">

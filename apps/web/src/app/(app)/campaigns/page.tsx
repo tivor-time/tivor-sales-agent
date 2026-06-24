@@ -1,9 +1,10 @@
 import Link from 'next/link'
-import { ArrowRight, Inbox, ListChecks, Send, Users, Zap } from 'lucide-react'
+import { ArrowRight, Inbox, ListChecks, Send, Users, Zap, Workflow } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { DegradedBanner } from '@/components/degraded-banner'
 import { PageContainer } from '@/components/shell/page-container'
+import { IconTile, SectionHeading } from '@/components/ui/stat'
 
 const STEPS = [
   {
@@ -40,12 +41,10 @@ export default function CampaignsPage() {
 
       <DegradedBanner />
 
-      <Card>
+      <Card className="overflow-hidden">
         <CardContent className="p-6 sm:p-8">
           <div className="max-w-2xl">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              How it works
-            </p>
+            <SectionHeading icon={Workflow}>How it works</SectionHeading>
             <h2 className="mt-2 text-lg font-semibold tracking-tight">
               Start a campaign from your leads
             </h2>
@@ -61,13 +60,11 @@ export default function CampaignsPage() {
               return (
                 <li
                   key={step.title}
-                  className="rounded-lg border bg-muted/40 p-4 transition-colors hover:bg-muted/60"
+                  className="rounded-xl border bg-card/60 p-4 shadow-sm transition-colors hover:bg-muted/40"
                 >
                   <div className="flex items-center justify-between">
-                    <div className="grid h-9 w-9 place-items-center rounded-lg bg-primary/10 text-primary">
-                      <Icon className="h-4 w-4" />
-                    </div>
-                    <span className="text-xs font-semibold tabular-nums text-muted-foreground/70">
+                    <IconTile icon={Icon} tone="primary" />
+                    <span className="font-mono text-xs font-semibold tabular-nums text-muted-foreground/70">
                       {String(i + 1).padStart(2, '0')}
                     </span>
                   </div>

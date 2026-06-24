@@ -9,13 +9,14 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { EmptyState } from '@/components/empty-state'
 import { ListSkeleton } from '@/components/loading-skeleton'
+import { IconTile, type StatTone } from '@/components/ui/stat'
 
 type ActivityTab = keyof OutreachActivityDTO
 
-const TABS: Array<{ key: ActivityTab; label: string; icon: LucideIcon }> = [
-  { key: 'received', label: 'Received', icon: Inbox },
-  { key: 'sent', label: 'Sent', icon: Send },
-  { key: 'moved', label: 'Moved', icon: FolderInput },
+const TABS: Array<{ key: ActivityTab; label: string; icon: LucideIcon; tone: StatTone }> = [
+  { key: 'received', label: 'Received', icon: Inbox, tone: 'sky' },
+  { key: 'sent', label: 'Sent', icon: Send, tone: 'success' },
+  { key: 'moved', label: 'Moved', icon: FolderInput, tone: 'violet' },
 ]
 
 function formatWhen(iso: string): string {
@@ -40,6 +41,7 @@ export function InboxActivityPanel() {
   const { data, isLoading, isError, error } = useOutreachActivity()
   const rows = useMemo(() => data?.[tab] ?? [], [data, tab])
   const code = (error as { code?: string } | null)?.code
+  const activeTab = TABS.find((t) => t.key === tab) ?? TABS[0]
 
   return (
     <Card>
@@ -92,35 +94,45 @@ export function InboxActivityPanel() {
           <EmptyState title="Couldn't load activity" description={(error as Error)?.message} />
         ) : rows.length === 0 ? (
           <EmptyState
-            icon={TABS.find((x) => x.key === tab)?.icon}
+            icon={activeTab.icon}
             title={`No ${tab} mail yet`}
             description="This section will fill automatically as webhook events arrive."
           />
         ) : (
           <div className="divide-y rounded-lg border">
             {rows.map((row) => (
-              <div key={row.id} className="space-y-1.5 px-4 py-3 transition-colors hover:bg-muted/40">
-                <div className="flex flex-wrap items-center gap-2">
-                  <p className="text-sm font-medium text-foreground">
-                    {row.subject || '(No subject)'}
+              <div
+                key={row.id}
+                className="flex items-start gap-3 px-4 py-3 transition-colors hover:bg-muted/40"
+              >
+                <IconTile icon={activeTab.icon} tone={activeTab.tone} size="sm" className="mt-0.5" />
+                <div className="min-w-0 flex-1 space-y-1.5">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="truncate text-sm font-medium text-foreground">
+                      {row.subject || '(No subject)'}
+                    </p>
+                    <Badge variant="secondary">
+                      {row.source === 'provider' ? 'Provider' : 'App'}
+                    </Badge>
+                    {row.role ? <Badge variant="outline">{row.role}</Badge> : null}
+                  </div>
+                  <p className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+                    <span className="truncate font-mono">{row.fromAddress || 'Unknown sender'}</span>
+                    <ArrowRight className="h-3 w-3 shrink-0" />
+                    <span className="truncate font-mono">
+                      {row.toAddress || 'Unknown recipient'}
+                    </span>
                   </p>
-                  <Badge variant="secondary">{row.source === 'provider' ? 'Provider' : 'App'}</Badge>
-                  {row.role ? <Badge variant="outline">{row.role}</Badge> : null}
-                </div>
-                <p className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
-                  <span className="truncate">{row.fromAddress || 'Unknown sender'}</span>
-                  <ArrowRight className="h-3 w-3 shrink-0" />
-                  <span className="truncate">{row.toAddress || 'Unknown recipient'}</span>
-                </p>
-                <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                  <span>{renderMeta(row)}</span>
-                  <span aria-hidden className="text-muted-foreground/40">
-                    ·
-                  </span>
-                  <span className="inline-flex items-center gap-1 tabular-nums">
-                    <Clock className="h-3 w-3" />
-                    {formatWhen(row.occurredAt)}
-                  </span>
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                    <span>{renderMeta(row)}</span>
+                    <span aria-hidden className="text-muted-foreground/40">
+                      ·
+                    </span>
+                    <span className="inline-flex items-center gap-1 font-mono tabular-nums">
+                      <Clock className="h-3 w-3" />
+                      {formatWhen(row.occurredAt)}
+                    </span>
+                  </div>
                 </div>
               </div>
             ))}

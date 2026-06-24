@@ -14,6 +14,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { IconTile } from '@/components/ui/stat'
 import { useGenerateDrafts } from '@/lib/query/outreach'
 
 export function GenerateOutreachDialog({
@@ -55,12 +56,10 @@ export function GenerateOutreachDialog({
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <div className="mb-1 grid h-10 w-10 place-items-center rounded-lg bg-primary/10 text-primary">
-            <Sparkles className="h-5 w-5" />
-          </div>
+          <IconTile icon={Sparkles} tone="primary" size="lg" className="mb-1" />
           <DialogTitle>
             Draft outreach for{' '}
-            <span className="tabular-nums">{leadIds.length}</span> lead
+            <span className="font-mono tabular-nums">{leadIds.length}</span> lead
             {leadIds.length === 1 ? '' : 's'}
           </DialogTitle>
           <DialogDescription>
@@ -82,12 +81,17 @@ export function GenerateOutreachDialog({
           </p>
         </div>
 
-        <div className="flex items-center gap-2 rounded-lg border bg-muted/40 px-3 py-2.5 text-xs text-muted-foreground">
-          <Users className="h-4 w-4 shrink-0" />
+        <div className="flex items-center gap-2.5 rounded-lg border bg-muted/40 px-3 py-2.5 text-xs text-muted-foreground">
+          <IconTile icon={Users} tone="primary" size="sm" />
           <span>
-            <span className="font-medium text-foreground tabular-nums">{leadIds.length}</span> lead
+            <span className="font-mono font-medium tabular-nums text-foreground">
+              {leadIds.length}
+            </span>{' '}
+            lead
             {leadIds.length === 1 ? '' : 's'} selected ·{' '}
-            <span className="font-medium text-foreground tabular-nums">{leadIds.length * 4}</span>{' '}
+            <span className="font-mono font-medium tabular-nums text-foreground">
+              {leadIds.length * 4}
+            </span>{' '}
             drafts will be generated
           </span>
         </div>
@@ -102,7 +106,7 @@ export function GenerateOutreachDialog({
             ) : (
               <>
                 <Sparkles className="h-4 w-4" /> Generate{' '}
-                <span className="tabular-nums">{leadIds.length * 4}</span> drafts
+                <span className="font-mono tabular-nums">{leadIds.length * 4}</span> drafts
               </>
             )}
           </Button>

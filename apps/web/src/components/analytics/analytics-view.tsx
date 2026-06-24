@@ -9,6 +9,11 @@ import {
   Inbox,
   ListTodo,
   MessageSquareReply,
+  Activity,
+  Filter,
+  PieChart as PieChartIcon,
+  Layers,
+  ClipboardList,
   type LucideIcon,
 } from 'lucide-react'
 import {
@@ -29,8 +34,9 @@ import {
 import { useAnalyticsReport } from '@/lib/query/analytics'
 import type { AnalyticsRangeDays } from '@/server/analytics/actions'
 import { EmptyState } from '@/components/empty-state'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
+import { StatCard, SectionHeading, type StatTone } from '@/components/ui/stat'
 import { cn } from '@/lib/utils'
 import {
   chartColor,
@@ -101,69 +107,30 @@ function RangeToggle({
   )
 }
 
-/** Per-metric icon tints — token-based (chart palette), adapt to light/dark. */
-const STAT_TINTS = [
-  'bg-chart-1/10 text-chart-1',
-  'bg-chart-2/10 text-chart-2',
-  'bg-chart-3/10 text-chart-3',
-  'bg-chart-4/10 text-chart-4',
-  'bg-chart-5/10 text-chart-5',
-  'bg-chart-6/10 text-chart-6',
-] as const
-
-/** Premium stat card: tinted icon square, big value, muted label. */
-function StatCard({
-  icon: Icon,
-  label,
-  value,
-  tintIndex,
-}: {
-  icon: LucideIcon
-  label: string
-  value: string
-  tintIndex: number
-}) {
-  return (
-    <Card className="p-5">
-      <div className="flex items-start justify-between gap-3">
-        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          {label}
-        </p>
-        <span
-          aria-hidden
-          className={cn(
-            'grid h-9 w-9 shrink-0 place-items-center rounded-lg',
-            STAT_TINTS[tintIndex % STAT_TINTS.length],
-          )}
-        >
-          <Icon className="h-[18px] w-[18px]" />
-        </span>
-      </div>
-      <p className="mt-3 text-2xl font-semibold tabular-nums tracking-tight text-foreground">
-        {value}
-      </p>
-    </Card>
-  )
-}
-
-/** Chart panel header with consistent typography. */
+/** Chart panel: uppercase tracked SectionHeading (icon + title) over a muted description. */
 function ChartCard({
   title,
   description,
+  icon,
+  iconTone = 'primary',
   children,
   className,
 }: {
   title: string
   description: string
+  icon: LucideIcon
+  iconTone?: StatTone
   children: React.ReactNode
   className?: string
 }) {
   return (
     <Card className={cn('overflow-hidden', className)}>
-      <CardHeader className="space-y-1 p-5 pb-0">
-        <CardTitle className="text-sm font-semibold tracking-tight">{title}</CardTitle>
-        <CardDescription className="text-xs">{description}</CardDescription>
-      </CardHeader>
+      <div className="space-y-1.5 p-5 pb-0">
+        <SectionHeading icon={icon} iconTone={iconTone}>
+          {title}
+        </SectionHeading>
+        <p className="text-xs text-muted-foreground">{description}</p>
+      </div>
       <CardContent className="p-5 pt-4">{children}</CardContent>
     </Card>
   )
@@ -280,12 +247,27 @@ export function AnalyticsView() {
     )
   }
 
-  const kpis: { icon: LucideIcon; label: string; value: string }[] = [
-    { icon: Users, label: 'Leads Added', value: formatInt(data.kpis.leadsAdded) },
-    { icon: Send, label: 'Outbound Sent', value: formatInt(data.kpis.outboundSent) },
-    { icon: Inbox, label: 'Inbound Inquiries', value: formatInt(data.kpis.inboundInquiries) },
-    { icon: ListTodo, label: 'Open Follow-ups', value: formatInt(data.kpis.openFollowUps) },
-    { icon: MessageSquareReply, label: 'Inquiry Rate', value: formatPct(data.kpis.replyRate) },
+  const kpis: { icon: LucideIcon; label: string; value: string; tone: StatTone }[] = [
+    { icon: Users, label: 'Leads Added', value: formatInt(data.kpis.leadsAdded), tone: 'primary' },
+    { icon: Send, label: 'Outbound Sent', value: formatInt(data.kpis.outboundSent), tone: 'sky' },
+    {
+      icon: Inbox,
+      label: 'Inbound Inquiries',
+      value: formatInt(data.kpis.inboundInquiries),
+      tone: 'success',
+    },
+    {
+      icon: ListTodo,
+      label: 'Open Follow-ups',
+      value: formatInt(data.kpis.openFollowUps),
+      tone: 'violet',
+    },
+    {
+      icon: MessageSquareReply,
+      label: 'Inquiry Rate',
+      value: formatPct(data.kpis.replyRate),
+      tone: 'warning',
+    },
   ]
 
   return (
@@ -298,19 +280,21 @@ export function AnalyticsView() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-        {kpis.map((kpi, i) => (
+        {kpis.map((kpi) => (
           <StatCard
             key={kpi.label}
             icon={kpi.icon}
             label={kpi.label}
             value={kpi.value}
-            tintIndex={i}
+            tone={kpi.tone}
           />
         ))}
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-4 rounded-2xl lg:grid-cols-2">
         <ChartCard
+          icon={Activity}
+          iconTone="primary"
           title="Daily Outreach Activity"
           description="Sent emails vs inbound mail vs created inquiries."
         >
@@ -360,6 +344,8 @@ export function AnalyticsView() {
         </ChartCard>
 
         <ChartCard
+          icon={Filter}
+          iconTone="sky"
           title="Outreach Funnel"
           description="Current-period movement from draft approval to triage."
         >
@@ -388,6 +374,8 @@ export function AnalyticsView() {
         </ChartCard>
 
         <ChartCard
+          icon={PieChartIcon}
+          iconTone="violet"
           title="Inquiry Intent Mix"
           description="What buyers are asking for most in the selected range."
         >
@@ -421,6 +409,8 @@ export function AnalyticsView() {
         </ChartCard>
 
         <ChartCard
+          icon={Layers}
+          iconTone="success"
           title="Lead Stage Distribution"
           description="Snapshot of where current leads sit in your pipeline."
         >
@@ -451,6 +441,8 @@ export function AnalyticsView() {
       </div>
 
       <ChartCard
+        icon={ClipboardList}
+        iconTone="warning"
         title="Follow-up Status Snapshot"
         description="Open and completed follow-up workload distribution across the workspace."
       >

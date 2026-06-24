@@ -1,6 +1,7 @@
 import OpenAI from 'openai'
 import Anthropic from '@anthropic-ai/sdk'
 import { env, flags } from '@tradepilot/shared/env'
+import { log } from '../logger'
 import { SUPPORTED_LANGUAGES, type Language } from '@tradepilot/shared'
 import {
   classifyInboundHeuristic,
@@ -148,14 +149,22 @@ export async function classifyInbound(
   try {
     const openAi = await classifyWithOpenAi(input)
     if (openAi) return openAi
-  } catch {
-    // fall through to Anthropic / heuristic fallback
+  } catch (err) {
+    // Don't fail triage on a provider error — but surface WHY we fell back, so a
+    // bad key / model / quota doesn't silently degrade every inquiry to heuristic.
+    log.warn(
+      { provider: 'openai', model: env.OPENAI_MODEL_FAST, err: (err as Error)?.message ?? String(err) },
+      'AI classify failed; trying fallback',
+    )
   }
   try {
     const anthropic = await classifyWithAnthropic(input)
     if (anthropic) return anthropic
-  } catch {
-    // fall through to heuristic fallback
+  } catch (err) {
+    log.warn(
+      { provider: 'anthropic', model: env.ANTHROPIC_MODEL_FAST, err: (err as Error)?.message ?? String(err) },
+      'AI classify failed; using heuristic',
+    )
   }
   return classifyInboundHeuristic(input)
 }

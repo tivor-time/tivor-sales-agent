@@ -40,7 +40,10 @@ export function Topbar({
         <PanelLeft className="h-5 w-5" />
       </Button>
 
-      <div className="ml-1 min-w-0">
+      {/* Hairline divider between the rail controls and the workspace identity */}
+      <div className="mx-1 h-5 w-px bg-border/60" aria-hidden />
+
+      <div className="min-w-0">
         {authEnabled ? (
           <OrganizationSwitcher hidePersonal afterSelectOrganizationUrl="/dashboard" />
         ) : (
@@ -52,7 +55,7 @@ export function Topbar({
         <ThemeToggle />
         {authEnabled ? (
           <>
-            <div className="mx-1 h-5 w-px bg-border" aria-hidden />
+            <div className="mx-1 h-5 w-px bg-border/60" aria-hidden />
             <UserButton afterSignOutUrl="/" />
           </>
         ) : null}

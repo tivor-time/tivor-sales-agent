@@ -103,14 +103,15 @@ export function StageBadge({ stage }: { stage: string }) {
 }
 
 export function IcpScore({ score }: { score: number | null }) {
-  if (score == null) return <span className="text-xs text-muted-foreground">—</span>
+  if (score == null)
+    return <span className="font-mono text-xs tabular-nums text-muted-foreground">—</span>
   const tone = score >= 70 ? 'bg-success' : score >= 40 ? 'bg-warning' : 'bg-muted-foreground/60'
   return (
     <div className="flex items-center gap-2">
       <div className="h-1.5 w-14 overflow-hidden rounded-full bg-muted">
         <div className={cn('h-full rounded-full transition-all', tone)} style={{ width: `${score}%` }} />
       </div>
-      <span className="tabular-nums text-xs font-medium text-foreground/80">{score}</span>
+      <span className="font-mono text-xs font-medium tabular-nums text-foreground/80">{score}</span>
     </div>
   )
 }

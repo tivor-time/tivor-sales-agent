@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react'
 import { Inbox, Database, Mail } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import { IconTile } from '@/components/ui/stat'
 import { EmptyState } from '@/components/empty-state'
 import { ListSkeleton } from '@/components/loading-skeleton'
 import { cn } from '@/lib/utils'
@@ -124,9 +125,7 @@ export function InboxView() {
               onClick={() => setSelectedId(r.id)}
               className="flex w-full items-start gap-3 px-4 py-3.5 text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
             >
-              <div className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-muted text-muted-foreground">
-                <Mail className="h-4 w-4" />
-              </div>
+              <IconTile icon={Mail} tone="muted" size="sm" className="mt-0.5" />
               <div className="min-w-0 flex-1 space-y-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="truncate text-sm font-semibold text-foreground">{r.subject}</span>
@@ -140,7 +139,7 @@ export function InboxView() {
                 </div>
               </div>
               {r.icpScore != null && (
-                <span className="mt-0.5 shrink-0 rounded-md bg-muted px-1.5 py-0.5 text-xs font-medium tabular-nums text-muted-foreground">
+                <span className="mt-0.5 shrink-0 rounded-md bg-muted px-1.5 py-0.5 font-mono text-[11px] font-medium tabular-nums text-muted-foreground">
                   ICP {r.icpScore}
                 </span>
               )}

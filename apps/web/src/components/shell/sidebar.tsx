@@ -15,7 +15,13 @@ export function Sidebar({
 }) {
   const pathname = usePathname()
   return (
-    <div className="flex h-full flex-col">
+    <div className="relative flex h-full flex-col">
+      {/* Subtle gradient hairline on the right edge of the rail */}
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-y-0 right-0 w-px bg-gradient-to-b from-transparent via-primary/30 to-transparent"
+      />
+
       {/* Brand lockup */}
       <div
         className={cn(
@@ -23,7 +29,7 @@ export function Sidebar({
           collapsed ? 'justify-center px-2' : 'gap-2.5 px-5',
         )}
       >
-        <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-primary text-primary-foreground shadow-sm">
+        <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-primary text-primary-foreground shadow-sm ring-1 ring-inset ring-primary/30">
           <Plug className="h-4 w-4" />
         </div>
         {!collapsed && (
@@ -36,7 +42,7 @@ export function Sidebar({
       {/* Nav */}
       <div className={cn('flex-1 overflow-y-auto py-4', collapsed ? 'px-2' : 'px-3')}>
         {!collapsed && (
-          <p className="mb-2 px-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
             Workspace
           </p>
         )}
@@ -55,7 +61,7 @@ export function Sidebar({
                   'group relative flex items-center rounded-md text-sm font-medium transition-colors',
                   collapsed ? 'justify-center px-2 py-2.5' : 'gap-3 px-3 py-2',
                   active
-                    ? 'bg-primary/10 text-primary'
+                    ? 'bg-primary/10 text-primary ring-1 ring-inset ring-primary/20'
                     : 'text-muted-foreground hover:bg-muted hover:text-foreground',
                 )}
               >
@@ -64,7 +70,7 @@ export function Sidebar({
                   <span
                     aria-hidden
                     className={cn(
-                      'absolute left-0 top-1/2 h-5 -translate-y-1/2 rounded-full bg-primary',
+                      'absolute left-0 top-1/2 h-5 -translate-y-1/2 rounded-r-full bg-primary',
                       collapsed ? 'w-0.5' : 'w-[3px] -ml-3',
                     )}
                   />
@@ -77,7 +83,7 @@ export function Sidebar({
                 />
                 {!collapsed && <span className="flex-1 truncate">{item.title}</span>}
                 {!collapsed && item.phase ? (
-                  <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-muted-foreground">
+                  <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] font-medium tabular-nums text-muted-foreground">
                     {item.phase}
                   </span>
                 ) : null}

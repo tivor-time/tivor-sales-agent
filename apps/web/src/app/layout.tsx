@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
+import { Inter, JetBrains_Mono } from 'next/font/google'
 import { ClerkProvider } from '@clerk/nextjs'
 import { flags } from '@tradepilot/shared/env'
 import { FlagsProvider } from '@/lib/flags-context'
@@ -7,6 +7,12 @@ import { Providers } from '@/components/providers'
 import './globals.css'
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' })
+// JetBrains Mono powers all numerics (KPIs, counts, %, dates) for an enterprise feel.
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ['latin'],
+  variable: '--font-mono',
+  display: 'swap',
+})
 
 export const metadata: Metadata = {
   title: 'TradePilot',
@@ -21,7 +27,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   )
 
   return (
-    <html lang="en" suppressHydrationWarning className={inter.variable}>
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={`${inter.variable} ${jetbrainsMono.variable}`}
+    >
       <body className="font-sans antialiased">
         {flags.isAuthEnabled ? (
           <ClerkProvider

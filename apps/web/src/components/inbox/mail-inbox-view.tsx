@@ -3,10 +3,10 @@
 import { useMemo, useState } from 'react'
 import { ArrowLeft, Database, Inbox, Mail, Reply, Search, RefreshCw, Send, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import { IconTile, StatusDot } from '@/components/ui/stat'
 import { EmptyState } from '@/components/empty-state'
 import { ListSkeleton, ReadingPaneSkeleton } from '@/components/loading-skeleton'
 import { useInbox, useInboxMessage, useReplyToInbound } from '@/lib/query/inbox'
@@ -58,11 +58,11 @@ function Avatar({ name, size = 'md' }: { name: string; size?: 'md' | 'lg' }) {
 
 function IntentChip({ intent, icpScore }: { intent: string; icpScore: number | null }) {
   return (
-    <span className="inline-flex items-center gap-1 rounded-full border border-border/70 bg-muted/50 px-2 py-0.5 text-xs font-medium text-foreground/80">
-      <Sparkles className="h-3 w-3 text-primary" />
+    <span className="inline-flex items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary">
+      <Sparkles className="h-3 w-3" />
       {prettyIntent(intent)}
       {typeof icpScore === 'number' ? (
-        <span className="tabular-nums text-muted-foreground">· {icpScore}</span>
+        <span className="font-mono tabular-nums text-primary/80">· {icpScore}</span>
       ) : null}
     </span>
   )
@@ -94,12 +94,19 @@ function MessageRow({
       <div className="min-w-0 flex-1 space-y-1">
         <div className="flex items-baseline justify-between gap-2">
           <span className="truncate text-sm font-semibold text-foreground">{name}</span>
-          <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+          <span className="shrink-0 font-mono text-[10px] uppercase tabular-nums tracking-tight text-muted-foreground">
             {formatWhen(item.receivedAt)}
           </span>
         </div>
-        <p className="truncate text-sm text-foreground/90">{item.subject || '(No subject)'}</p>
-        <p className="line-clamp-1 text-xs text-muted-foreground">{item.snippet || ''}</p>
+        <p
+          className={cn(
+            'truncate text-[13px] font-medium',
+            active ? 'text-primary' : 'text-foreground/90',
+          )}
+        >
+          {item.subject || '(No subject)'}
+        </p>
+        <p className="line-clamp-2 text-xs text-muted-foreground">{item.snippet || ''}</p>
         {item.intent ? (
           <div className="pt-1">
             <IntentChip intent={item.intent} icpScore={item.icpScore} />
@@ -168,29 +175,32 @@ function ReadingPane({ id, onBack }: { id: string; onBack: () => void }) {
               ) : null}
             </p>
             <p className="text-xs text-muted-foreground">
-              to {data.toAddress || 'you'} · {formatWhen(data.receivedAt)}
+              to {data.toAddress || 'you'} ·{' '}
+              <span className="font-mono tabular-nums">{formatWhen(data.receivedAt)}</span>
             </p>
           </div>
+          {data.status ? (
+            <span className="ml-auto inline-flex shrink-0 items-center gap-1 rounded-full border border-border bg-muted/50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+              <StatusDot tone="muted" />
+              {data.status}
+            </span>
+          ) : null}
         </div>
 
         {data.intent ? (
-          <div className="space-y-3 rounded-xl border border-border/70 bg-muted/30 p-4">
+          <div className="space-y-3 rounded-xl border border-primary/20 bg-primary/[0.04] p-4">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              <IconTile icon={Sparkles} tone="primary" size="sm" />
+              <span className="text-[10px] font-bold uppercase tracking-widest text-primary">
                 AI insights
               </span>
               <IntentChip intent={data.intent} icpScore={data.icpScore} />
-              {data.status ? (
-                <Badge variant="outline" className="capitalize">
-                  {data.status}
-                </Badge>
-              ) : null}
             </div>
             {bant.length > 0 ? (
-              <dl className="grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-4">
+              <dl className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-4">
                 {bant.map(([k, v]) => (
                   <div key={k} className="min-w-0 space-y-0.5">
-                    <dt className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                    <dt className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
                       {k}
                     </dt>
                     <dd className="truncate text-sm text-foreground">{v}</dd>
@@ -213,9 +223,12 @@ function ReadingPane({ id, onBack }: { id: string; onBack: () => void }) {
 
         {replying ? (
           <div className="space-y-3 rounded-xl border border-border/70 bg-card p-4 shadow-sm">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Reply to {fromName}
-            </p>
+            <div className="flex items-center gap-2">
+              <IconTile icon={Reply} tone="primary" size="sm" />
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                Reply to {fromName}
+              </p>
+            </div>
             <Textarea
               autoFocus
               value={replyBody}
@@ -289,10 +302,10 @@ export function MailInboxView() {
       <div className="space-y-3 border-b border-border/70 px-4 py-3.5">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <Inbox className="h-4 w-4 text-muted-foreground" />
+            <IconTile icon={Inbox} tone="primary" size="sm" />
             <h1 className="text-sm font-semibold tracking-tight text-foreground">Inbox</h1>
             {rows.length > 0 ? (
-              <span className="rounded-full bg-muted px-1.5 py-0.5 text-xs font-medium tabular-nums text-muted-foreground">
+              <span className="rounded-full bg-muted px-1.5 py-0.5 font-mono text-[11px] font-medium tabular-nums text-muted-foreground">
                 {rows.length}
               </span>
             ) : null}

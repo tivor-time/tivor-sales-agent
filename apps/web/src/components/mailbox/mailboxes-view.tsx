@@ -8,6 +8,7 @@ import { useFlags } from '@/lib/flags-context'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { IconTile, MiniProgress, SectionHeading, StatusDot } from '@/components/ui/stat'
 import { useQueryClient } from '@tanstack/react-query'
 import { EmptyState } from '@/components/empty-state'
 import { ListSkeleton } from '@/components/loading-skeleton'
@@ -25,14 +26,6 @@ const PROVIDER_LABEL: Record<MailboxDTO['provider'], string> = {
   microsoft: 'Microsoft 365',
   smtp: 'IMAP / SMTP',
   resend: 'Resend',
-}
-
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <h2 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-      {children}
-    </h2>
-  )
 }
 
 const UNIPILE_PERKS = [
@@ -57,9 +50,7 @@ function UnipileConnectCard({
       <Card>
         <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
           <div className="flex min-w-0 items-center gap-3">
-            <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
-              <Plug className="h-4 w-4" />
-            </div>
+            <IconTile icon={Plug} tone="primary" />
             <div className="min-w-0">
               <p className="text-sm font-medium">Connect another mailbox</p>
               <p className="truncate text-xs text-muted-foreground">
@@ -85,9 +76,7 @@ function UnipileConnectCard({
   return (
     <Card className="border-primary/30 bg-primary/[0.04]">
       <CardHeader className="flex-row items-start gap-3.5 space-y-0 p-5 sm:p-6">
-        <div className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
-          <Zap className="h-5 w-5" />
-        </div>
+        <IconTile icon={Zap} tone="primary" size="lg" />
         <div className="min-w-0 space-y-1">
           <div className="flex flex-wrap items-center gap-2">
             <CardTitle className="text-base">Connect Gmail</CardTitle>
@@ -144,9 +133,7 @@ function ConnectCard({
   return (
     <Card>
       <CardHeader className="flex-row items-center gap-3 space-y-0 p-5 pb-3">
-        <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-muted text-muted-foreground">
-          <Mail className="h-4 w-4" />
-        </div>
+        <IconTile icon={Mail} tone="muted" />
         <CardTitle className="text-base">{label}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-2 p-5 pt-0">
@@ -174,14 +161,13 @@ function ConnectCard({
 function MailboxCard({ m }: { m: MailboxDTO }) {
   const setSending = useSetMailboxSending()
   const disconnect = useDisconnectMailbox()
+  const capPct = m.dailyCap > 0 ? (m.sentToday / m.dailyCap) * 100 : 0
 
   return (
     <Card>
       <CardHeader className="flex-row items-start justify-between gap-3 space-y-0 p-5 pb-4">
         <div className="flex min-w-0 items-start gap-3">
-          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-muted text-muted-foreground">
-            <Mail className="h-5 w-5" />
-          </div>
+          <IconTile icon={Mail} tone={m.sendingEnabled ? 'success' : 'muted'} size="lg" />
           <div className="min-w-0 space-y-0.5">
             <CardTitle className="truncate text-base">{m.email}</CardTitle>
             <p className="flex flex-wrap items-center gap-x-1.5 text-xs text-muted-foreground">
@@ -204,28 +190,37 @@ function MailboxCard({ m }: { m: MailboxDTO }) {
           </div>
         </div>
         <Badge variant={m.sendingEnabled ? 'success' : 'secondary'} className="shrink-0 gap-1.5">
-          <span
-            className={cn(
-              'h-1.5 w-1.5 rounded-full',
-              m.sendingEnabled ? 'bg-success-foreground' : 'bg-muted-foreground/60',
-            )}
+          <StatusDot
+            tone={m.sendingEnabled ? 'success' : 'muted'}
+            pulse={m.sendingEnabled}
+            className={m.sendingEnabled ? 'bg-success-foreground' : undefined}
           />
           {m.sendingEnabled ? 'Sending on' : 'Sending off'}
         </Badge>
       </CardHeader>
       <CardContent className="space-y-4 p-5 pt-0">
-        <div className="flex items-center gap-2 rounded-lg border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
-          <span>
-            Sent today{' '}
-            <span className="font-medium tabular-nums text-foreground">{m.sentToday}</span>
-            <span className="text-muted-foreground/60"> / {m.dailyCap}</span>
-          </span>
-          {m.warmupState ? (
-            <>
-              <span className="text-muted-foreground/40">·</span>
-              <span className="capitalize">Warmup: {m.warmupState}</span>
-            </>
-          ) : null}
+        <div className="space-y-2.5 rounded-xl border border-border/60 bg-muted/30 px-3.5 py-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="space-y-1">
+              <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                Sent today
+              </p>
+              <p className="font-mono text-sm tabular-nums text-foreground">
+                {m.sentToday}
+                <span className="text-muted-foreground/60"> / {m.dailyCap}</span>
+              </p>
+            </div>
+            {m.warmupState ? (
+              <span className="inline-flex items-center gap-1 rounded-full border border-warning/20 bg-warning/10 px-2 py-0.5 text-[10px] font-bold capitalize text-warning">
+                <StatusDot tone="warning" />
+                Warmup: {m.warmupState}
+              </span>
+            ) : null}
+          </div>
+          <MiniProgress
+            value={capPct}
+            tone={capPct >= 100 ? 'warning' : m.sendingEnabled ? 'success' : 'muted'}
+          />
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Button
@@ -297,7 +292,7 @@ export function MailboxesView() {
   if (isLoading) {
     return (
       <div className="space-y-3">
-        <SectionLabel>Connected mailboxes</SectionLabel>
+        <SectionHeading icon={Mail}>Connected mailboxes</SectionHeading>
         <ListSkeleton rows={3} />
       </div>
     )
@@ -312,18 +307,22 @@ export function MailboxesView() {
     return (
       <div className="space-y-6">
         <div className="space-y-3">
-          <div className="flex items-center justify-between gap-2">
-            <SectionLabel>Connected mailboxes</SectionLabel>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => sync.mutate()}
-              disabled={sync.isPending}
-            >
-              <RefreshCw className={cn('h-4 w-4', sync.isPending && 'animate-spin')} />
-              {sync.isPending ? 'Syncing...' : 'Sync inbox'}
-            </Button>
-          </div>
+          <SectionHeading
+            icon={Mail}
+            action={
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => sync.mutate()}
+                disabled={sync.isPending}
+              >
+                <RefreshCw className={cn('h-4 w-4', sync.isPending && 'animate-spin')} />
+                {sync.isPending ? 'Syncing...' : 'Sync inbox'}
+              </Button>
+            }
+          >
+            Connected mailboxes
+          </SectionHeading>
           <div className="space-y-3">
             {rows.map((m) => (
               <MailboxCard key={m.id} m={m} />
@@ -345,7 +344,7 @@ export function MailboxesView() {
           tokens/linkage. Unipile is the canonical path. */}
       {!flags.isUnipileEnabled && (
         <div className="space-y-3">
-          <SectionLabel>Direct provider fallback</SectionLabel>
+          <SectionHeading icon={Plug}>Direct provider fallback</SectionHeading>
           <div className="grid gap-3 sm:grid-cols-2">
             <ConnectCard
               provider="gmail"

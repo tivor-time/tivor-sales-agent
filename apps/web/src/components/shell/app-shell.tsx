@@ -83,7 +83,7 @@ export function AppShell({
         />
         {/* Full-height content region. Each page owns its own scroll + width:
             content pages use <PageContainer>; workspace pages (Inbox/Copilot) fill it. */}
-        <main id="main" className="min-h-0 flex-1 overflow-hidden">
+        <main id="main" className="app-canvas min-h-0 flex-1 overflow-hidden">
           {children}
         </main>
       </div>

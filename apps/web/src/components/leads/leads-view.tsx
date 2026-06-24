@@ -2,9 +2,10 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { Search, Users, Database, Trash2, ChevronRight } from 'lucide-react'
+import { Search, Users, Database, Trash2, ChevronRight, Filter } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { SectionHeading } from '@/components/ui/stat'
 import {
   Table,
   TableBody,
@@ -95,7 +96,19 @@ export function LeadsView() {
         <ImportDialog onImported={() => setSelected(new Set())} />
       </div>
 
-      {/* Stage filter chips */}
+      {/* Stage filter */}
+      <SectionHeading
+        icon={Filter}
+        action={
+          data && !isLoading ? (
+            <span className="font-mono text-[11px] tabular-nums text-muted-foreground">
+              {data.total.toLocaleString()} total
+            </span>
+          ) : undefined
+        }
+      >
+        Filter by stage
+      </SectionHeading>
       <div className="flex flex-wrap items-center gap-1.5">
         {LEAD_STAGES.map((s) => {
           const active = stages.includes(s)
@@ -131,7 +144,9 @@ export function LeadsView() {
       {/* Bulk action bar */}
       {selectedIds.length > 0 && (
         <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-card px-3 py-2 text-sm shadow-sm">
-          <span className="font-medium tabular-nums">{selectedIds.length} selected</span>
+          <span className="font-medium">
+            <span className="font-mono tabular-nums">{selectedIds.length}</span> selected
+          </span>
           <span className="mx-1 hidden h-4 w-px bg-border sm:block" aria-hidden />
           <select
             className={SELECT_CLASS}
@@ -193,7 +208,7 @@ export function LeadsView() {
         />
       ) : (
         <>
-          <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
+          <div className="overflow-hidden rounded-2xl border bg-card shadow-sm">
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
@@ -264,7 +279,7 @@ export function LeadsView() {
                     <TableCell>
                       <IcpScore score={lead.icpScore} />
                     </TableCell>
-                    <TableCell className="pr-4 text-right text-xs tabular-nums text-muted-foreground">
+                    <TableCell className="pr-4 text-right font-mono text-xs tabular-nums text-muted-foreground">
                       {new Date(lead.updatedAt).toLocaleDateString()}
                     </TableCell>
                   </TableRow>
@@ -275,9 +290,13 @@ export function LeadsView() {
 
           {/* Pagination */}
           <div className="flex items-center justify-between text-sm text-muted-foreground">
-            <span className="tabular-nums">
-              {data?.total.toLocaleString()} lead{data?.total === 1 ? '' : 's'} · page {page} of{' '}
-              {pageCount}
+            <span>
+              <span className="font-mono tabular-nums text-foreground/80">
+                {data?.total.toLocaleString()}
+              </span>{' '}
+              lead{data?.total === 1 ? '' : 's'} · page{' '}
+              <span className="font-mono tabular-nums text-foreground/80">{page}</span> of{' '}
+              <span className="font-mono tabular-nums text-foreground/80">{pageCount}</span>
             </span>
             <div className="flex gap-2">
               <Button

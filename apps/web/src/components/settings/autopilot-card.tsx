@@ -4,6 +4,7 @@ import { CalendarClock, Rocket, ShieldCheck, Send } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { IconTile, StatusDot } from '@/components/ui/stat'
 import { useAutopilot, useSetAutopilot } from '@/lib/query/settings'
 
 const HIGHLIGHTS = [
@@ -22,18 +23,18 @@ export function AutopilotCard() {
     <Card className={cn('transition-colors', enabled && 'border-primary/40 bg-primary/[0.04]')}>
       <CardHeader className="flex-row items-start justify-between gap-4 space-y-0 p-5 sm:p-6">
         <div className="flex min-w-0 items-start gap-3.5">
-          <div
-            className={cn(
-              'grid h-10 w-10 shrink-0 place-items-center rounded-lg transition-colors',
-              enabled ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground',
-            )}
-          >
-            <Rocket className="h-5 w-5" />
-          </div>
+          <IconTile icon={Rocket} tone={enabled ? 'primary' : 'muted'} size="lg" />
           <div className="min-w-0 space-y-1">
             <div className="flex items-center gap-2">
               <h2 className="text-base font-semibold leading-none tracking-tight">Autopilot</h2>
-              <Badge variant={enabled ? 'success' : 'secondary'}>{enabled ? 'On' : 'Off'}</Badge>
+              <Badge variant={enabled ? 'success' : 'secondary'} className="gap-1.5">
+                <StatusDot
+                  tone={enabled ? 'success' : 'muted'}
+                  pulse={enabled}
+                  className={enabled ? 'bg-success-foreground' : undefined}
+                />
+                {enabled ? 'On' : 'Off'}
+              </Badge>
             </div>
             <p className="text-sm text-muted-foreground">
               Let the AI run new campaigns end-to-end — sending and follow-ups, hands-free.
@@ -67,7 +68,7 @@ export function AutopilotCard() {
           {HIGHLIGHTS.map(({ icon: Icon, label }) => (
             <li
               key={label}
-              className="flex items-start gap-2.5 rounded-lg border bg-card px-3 py-2.5"
+              className="flex items-start gap-2.5 rounded-xl border border-border/60 bg-muted/30 px-3 py-2.5"
             >
               <Icon className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
               <span className="text-xs leading-snug text-foreground/80">{label}</span>

@@ -1,21 +1,22 @@
 'use client'
 
 import { useState } from 'react'
-import { Check, X, Pencil, Bot, FileText, AlertTriangle, ArrowRight } from 'lucide-react'
+import { Check, X, Pencil, Bot, FileText, AlertTriangle, ArrowRight, Mail } from 'lucide-react'
 import { LANGUAGE_LABELS } from '@tradepilot/shared'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import { IconTile } from '@/components/ui/stat'
 import { useApproveDraft, useRejectDraft, useEditDraft } from '@/lib/query/outreach'
 import type { DraftMessageDTO } from '@/server/outreach/dto'
 
-const STEP_LABEL: Record<string, string> = {
-  intro: 'Intro · Day 1',
-  follow_up: 'Follow-up · Day 3',
-  value: 'Value · Day 7',
-  breakup: 'Breakup · Day 14',
+const STEP_LABEL: Record<string, { name: string; day: string }> = {
+  intro: { name: 'Intro', day: 'Day 1' },
+  follow_up: { name: 'Follow-up', day: 'Day 3' },
+  value: { name: 'Value', day: 'Day 7' },
+  breakup: { name: 'Breakup', day: 'Day 14' },
 }
 
 export function DraftCard({ draft }: { draft: DraftMessageDTO }) {
@@ -37,18 +38,33 @@ export function DraftCard({ draft }: { draft: DraftMessageDTO }) {
 
   const isHigh = draft.spamLevel === 'high'
   const isMedium = draft.spamLevel === 'medium'
+  const step = STEP_LABEL[draft.stepKind]
 
   return (
     <div
       className={cn(
-        'overflow-hidden rounded-xl border bg-card shadow-sm transition-shadow hover:shadow-md',
+        'overflow-hidden rounded-2xl border bg-card shadow-sm transition-shadow hover:shadow-md',
         isHigh && 'border-l-2 border-l-destructive',
         isMedium && 'border-l-2 border-l-warning',
       )}
     >
       {/* Meta row */}
       <div className="flex flex-wrap items-center gap-2 border-b px-5 py-3">
-        <Badge variant="secondary">{STEP_LABEL[draft.stepKind] ?? draft.stepKind}</Badge>
+        <IconTile icon={Mail} tone="primary" size="sm" />
+        <div className="mr-1 flex items-baseline gap-2">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            Step <span className="font-mono tabular-nums text-foreground">{draft.stepOrder}</span>
+          </span>
+          <span className="text-sm font-semibold tracking-tight text-foreground">
+            {step?.name ?? draft.stepKind}
+          </span>
+          {step ? (
+            <span className="font-mono text-[11px] tabular-nums text-muted-foreground">
+              {step.day}
+            </span>
+          ) : null}
+        </div>
+        <span className="hidden flex-1 sm:block" aria-hidden />
         <Badge variant="outline">{LANGUAGE_LABELS[draft.language] ?? draft.language}</Badge>
         <Badge variant="outline" className="gap-1">
           {draft.generatedByAi ? <Bot className="h-3 w-3" /> : <FileText className="h-3 w-3" />}
@@ -111,7 +127,7 @@ export function DraftCard({ draft }: { draft: DraftMessageDTO }) {
               <div className="mb-3 flex items-center gap-1.5 text-xs text-muted-foreground">
                 <span className="font-medium uppercase tracking-wide">To</span>
                 <ArrowRight className="h-3 w-3" />
-                <span className="truncate font-medium text-foreground/80">{draft.toAddress}</span>
+                <span className="truncate font-mono text-foreground/80">{draft.toAddress}</span>
               </div>
             )}
 
@@ -126,21 +142,24 @@ export function DraftCard({ draft }: { draft: DraftMessageDTO }) {
             </div>
 
             {/* Actions */}
-            <div className="mt-4 flex items-center justify-end gap-2">
-              <Button variant="ghost" size="sm" onClick={() => setEditing(true)} disabled={busy}>
-                <Pencil className="h-4 w-4" /> Edit
-              </Button>
+            <div className="mt-4 flex items-center justify-between gap-2 border-t border-border/60 pt-4">
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
                 onClick={() => reject.mutate({ id: draft.id })}
                 disabled={busy}
+                className="text-muted-foreground hover:text-destructive"
               >
                 <X className="h-4 w-4" /> Reject
               </Button>
-              <Button size="sm" onClick={() => approve.mutate({ id: draft.id })} disabled={busy}>
-                <Check className="h-4 w-4" /> Approve
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={() => setEditing(true)} disabled={busy}>
+                  <Pencil className="h-4 w-4" /> Edit
+                </Button>
+                <Button size="sm" onClick={() => approve.mutate({ id: draft.id })} disabled={busy}>
+                  <Check className="h-4 w-4" /> Approve
+                </Button>
+              </div>
             </div>
           </>
         )}

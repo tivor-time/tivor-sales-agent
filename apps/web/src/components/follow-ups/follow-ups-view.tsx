@@ -5,15 +5,19 @@ import {
   AlertTriangle,
   CalendarClock,
   Check,
+  CheckCircle2,
   ClipboardCheck,
   Database,
+  ListChecks,
   Plus,
   Repeat,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
 import { EmptyState } from '@/components/empty-state'
 import { ListSkeleton } from '@/components/loading-skeleton'
+import { SectionHeading, StatCard, StatusDot, type StatTone } from '@/components/ui/stat'
 import { cn } from '@/lib/utils'
 import { useFollowUps, useCreateFollowUp, useUpdateFollowUp } from '@/lib/query/followups'
 import { TASK_STATUSES, type TaskStatus, type ListFollowUpsInput } from '@/server/followup/schemas'
@@ -26,14 +30,24 @@ const STATUS_LABEL: Record<TaskStatus, string> = {
   cancelled: 'Cancelled',
 }
 
-// Status dot color, mapped to semantic feedback tokens.
-const STATUS_DOT: Record<TaskStatus, string> = {
-  open: 'bg-primary',
-  in_progress: 'bg-warning',
-  done: 'bg-success',
-  snoozed: 'bg-muted-foreground/50',
-  cancelled: 'bg-muted-foreground/30',
+// Status → StatusDot tone, mapped to semantic feedback tokens.
+const STATUS_TONE: Record<TaskStatus, StatTone> = {
+  open: 'primary',
+  in_progress: 'warning',
+  done: 'success',
+  snoozed: 'muted',
+  cancelled: 'muted',
 }
+
+// Status → Badge variant for the inline status pill.
+const STATUS_BADGE: Record<TaskStatus, 'default' | 'secondary' | 'success' | 'warning' | 'outline'> =
+  {
+    open: 'outline',
+    in_progress: 'warning',
+    done: 'success',
+    snoozed: 'secondary',
+    cancelled: 'secondary',
+  }
 
 function formatDue(iso: string) {
   return new Date(iso).toLocaleDateString(undefined, {
@@ -59,6 +73,20 @@ export function FollowUpsView() {
 
   const overdue = (d: string | null) => !!d && new Date(d).getTime() < Date.now()
 
+  // Counts derived from the rows actually loaded — no invented data.
+  const counts = useMemo(() => {
+    let active = 0
+    let done = 0
+    let overdueCount = 0
+    for (const t of rows) {
+      const open = t.status !== 'done' && t.status !== 'cancelled'
+      if (open) active += 1
+      if (t.status === 'done') done += 1
+      if (open && overdue(t.dueDate)) overdueCount += 1
+    }
+    return { active, done, overdue: overdueCount }
+  }, [rows])
+
   function submit() {
     if (!title.trim() || create.isPending) return
     create.mutate({ title: title.trim(), dueDate: due || undefined })
@@ -66,13 +94,40 @@ export function FollowUpsView() {
     setDue('')
   }
 
+  const showStats = !isLoading && !isError && code !== 'DB_UNAVAILABLE' && rows.length > 0
+
   return (
     <div className="space-y-5">
+      {/* KPI strip — real, derived counts only */}
+      {showStats ? (
+        <div className="grid gap-4 sm:grid-cols-3">
+          <StatCard
+            icon={ListChecks}
+            tone="primary"
+            label={showAll ? 'Total tasks' : 'Active tasks'}
+            value={counts.active.toString().padStart(2, '0')}
+            footer={showAll ? 'Across all statuses' : 'Open, in progress & snoozed'}
+          />
+          <StatCard
+            icon={AlertTriangle}
+            tone={counts.overdue > 0 ? 'destructive' : 'muted'}
+            label="Overdue"
+            value={counts.overdue.toString().padStart(2, '0')}
+            footer={counts.overdue > 0 ? 'Past due — needs attention' : 'Nothing past due'}
+          />
+          <StatCard
+            icon={CheckCircle2}
+            tone="success"
+            label="Completed"
+            value={counts.done.toString().padStart(2, '0')}
+            footer={showAll ? 'Marked done' : 'Toggle “all statuses” to see done'}
+          />
+        </div>
+      ) : null}
+
       {/* Composer */}
-      <div className="rounded-xl border bg-card p-4 shadow-sm">
-        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          New follow-up
-        </p>
+      <div className="rounded-2xl border bg-card p-4 shadow-sm">
+        <SectionHeading icon={Plus}>New follow-up</SectionHeading>
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <Input
             placeholder="e.g. Chase reply from Müller GmbH"
@@ -103,7 +158,7 @@ export function FollowUpsView() {
       {/* Toolbar: count + filter */}
       <div className="flex items-center justify-between">
         <span className="text-sm text-muted-foreground">
-          <span className="font-medium tabular-nums text-foreground">{rows.length}</span>{' '}
+          <span className="font-mono font-medium tabular-nums text-foreground">{rows.length}</span>{' '}
           {rows.length === 1 ? 'task' : 'tasks'}
         </span>
         <button
@@ -139,7 +194,7 @@ export function FollowUpsView() {
           description="Add a task to stay on top of buyers — chase replies, schedule check-ins, set recurring nudges."
         />
       ) : (
-        <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
+        <div className="overflow-hidden rounded-2xl border bg-card shadow-sm">
           <div className="divide-y divide-border">
             {rows.map((t) => {
               const isOverdue = overdue(t.dueDate) && t.status !== 'done' && t.status !== 'cancelled'
@@ -150,20 +205,29 @@ export function FollowUpsView() {
                   className="group flex flex-wrap items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/40"
                 >
                   {/* Status dot */}
-                  <span
-                    className={cn('h-2 w-2 shrink-0 rounded-full', STATUS_DOT[t.status])}
-                    aria-hidden
+                  <StatusDot
+                    tone={STATUS_TONE[t.status]}
+                    pulse={t.status === 'in_progress'}
+                    className="shrink-0"
                   />
 
                   {/* Title + meta */}
                   <div className="min-w-0 flex-1">
-                    <div
-                      className={cn(
-                        'truncate text-sm font-medium text-foreground',
-                        isDone && 'text-muted-foreground line-through',
-                      )}
-                    >
-                      {t.title}
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={cn(
+                          'truncate text-sm font-medium text-foreground',
+                          isDone && 'text-muted-foreground line-through',
+                        )}
+                      >
+                        {t.title}
+                      </span>
+                      <Badge
+                        variant={STATUS_BADGE[t.status]}
+                        className="shrink-0 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide"
+                      >
+                        {STATUS_LABEL[t.status]}
+                      </Badge>
                     </div>
                     <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
                       {t.leadCompany ? (
@@ -177,7 +241,7 @@ export function FollowUpsView() {
                       {t.dueDate ? (
                         <span
                           className={cn(
-                            'inline-flex items-center gap-1 tabular-nums',
+                            'inline-flex items-center gap-1',
                             isOverdue && 'font-medium text-destructive',
                           )}
                         >
@@ -187,7 +251,7 @@ export function FollowUpsView() {
                             <CalendarClock className="h-3.5 w-3.5" />
                           )}
                           {isOverdue ? 'Overdue · ' : 'Due '}
-                          {formatDue(t.dueDate)}
+                          <span className="font-mono tabular-nums">{formatDue(t.dueDate)}</span>
                         </span>
                       ) : (
                         <span className="text-muted-foreground/70">No due date</span>

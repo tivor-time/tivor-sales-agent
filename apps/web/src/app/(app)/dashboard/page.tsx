@@ -1,36 +1,51 @@
-import { TrendingUp, Users, ShieldCheck, FileText, Mail, Upload, Send, ArrowRight } from 'lucide-react'
+import { TrendingUp, Users, ShieldCheck, FileText, Mail, Upload, Send, ArrowRight, Rocket } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
+import { StatCard, IconTile, SectionHeading, StatusDot, type StatTone } from '@/components/ui/stat'
 import { DegradedBanner } from '@/components/degraded-banner'
 import { PageContainer } from '@/components/shell/page-container'
 
-const KPIS = [
+type Kpi = {
+  label: string
+  value: string
+  note: string
+  icon: typeof TrendingUp
+  tone: StatTone
+  /** Only Deliverability has a real (success) status; others are placeholder-muted. */
+  dotTone: StatTone
+}
+
+const KPIS: Kpi[] = [
   {
     label: 'Pipeline value',
     value: '—',
     note: 'No data yet',
     icon: TrendingUp,
-    dot: 'bg-muted-foreground/40',
+    tone: 'primary',
+    dotTone: 'muted',
   },
   {
     label: 'Active leads',
     value: '—',
     note: 'Import leads to begin',
     icon: Users,
-    dot: 'bg-muted-foreground/40',
+    tone: 'sky',
+    dotTone: 'muted',
   },
   {
     label: 'Deliverability',
     value: 'Via Gmail',
     note: 'Sent through your mailbox',
     icon: ShieldCheck,
-    dot: 'bg-success',
+    tone: 'success',
+    dotTone: 'success',
   },
   {
     label: 'Latest brief',
     value: 'None yet',
     note: 'Weekly briefs coming soon',
     icon: FileText,
-    dot: 'bg-muted-foreground/40',
+    tone: 'violet',
+    dotTone: 'muted',
   },
 ]
 
@@ -40,6 +55,7 @@ const STEPS = [
     label: 'Connect Gmail',
     description: 'Link your mailbox to send and receive.',
     icon: Mail,
+    tone: 'primary' as StatTone,
     href: '/settings',
   },
   {
@@ -47,6 +63,7 @@ const STEPS = [
     label: 'Import leads',
     description: 'Bring in the buyers you want to reach.',
     icon: Upload,
+    tone: 'sky' as StatTone,
     href: '/leads',
   },
   {
@@ -54,6 +71,7 @@ const STEPS = [
     label: 'Launch a campaign',
     description: 'Let the agent draft and send outreach.',
     icon: Send,
+    tone: 'success' as StatTone,
     href: '/campaigns',
   },
 ]
@@ -71,46 +89,30 @@ export default function DashboardPage() {
       <DegradedBanner />
 
       <section className="space-y-3">
-        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          Pipeline overview
-        </p>
+        <SectionHeading icon={TrendingUp}>Pipeline overview</SectionHeading>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {KPIS.map((k) => {
-            const Icon = k.icon
-            return (
-              <Card key={k.label} className="p-5 hover:shadow-md">
-                <CardContent className="flex flex-col gap-4 p-0">
-                  <div className="flex items-start justify-between">
-                    <span className="grid h-9 w-9 place-items-center rounded-lg bg-primary/10 text-primary">
-                      <Icon className="h-[18px] w-[18px]" aria-hidden />
-                    </span>
-                    <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                      {k.label}
-                    </span>
-                  </div>
-                  <div className="space-y-1.5">
-                    <div className="text-2xl font-semibold tracking-tight tabular-nums">
-                      {k.value}
-                    </div>
-                    <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <span
-                        className={`h-1.5 w-1.5 shrink-0 rounded-full ${k.dot}`}
-                        aria-hidden
-                      />
-                      {k.note}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            )
-          })}
+          {KPIS.map((k) => (
+            <StatCard
+              key={k.label}
+              icon={k.icon}
+              tone={k.tone}
+              label={k.label}
+              value={k.value}
+              footer={
+                <span className="flex items-center gap-1.5">
+                  <StatusDot tone={k.dotTone} className="shrink-0" />
+                  {k.note}
+                </span>
+              }
+            />
+          ))}
         </div>
       </section>
 
       <section className="space-y-3">
-        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        <SectionHeading icon={Rocket} iconTone="success">
           Getting started
-        </p>
+        </SectionHeading>
         <Card className="p-2">
           <CardContent className="grid gap-1 p-0 sm:grid-cols-3">
             {STEPS.map((s) => {
@@ -121,12 +123,10 @@ export default function DashboardPage() {
                   href={s.href}
                   className="group flex items-start gap-3 rounded-lg p-4 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
-                  <span className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-muted text-muted-foreground transition-colors group-hover:bg-primary/10 group-hover:text-primary">
-                    <Icon className="h-[18px] w-[18px]" aria-hidden />
-                  </span>
+                  <IconTile icon={Icon} tone={s.tone} className="mt-0.5" />
                   <div className="min-w-0 space-y-0.5">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-[11px] font-medium tabular-nums text-muted-foreground/70">
+                      <span className="font-mono text-[11px] font-medium tabular-nums text-muted-foreground/70">
                         {s.step}
                       </span>
                       <span className="truncate text-sm font-medium text-foreground">

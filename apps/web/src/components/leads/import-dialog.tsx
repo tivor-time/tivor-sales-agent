@@ -168,7 +168,7 @@ export function ImportDialog({ onImported, children }: { onImported?: () => void
         {step === 'map' && preview && (
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              <span className="font-medium text-foreground tabular-nums">
+              <span className="font-mono font-medium tabular-nums text-foreground">
                 {preview.rowCount.toLocaleString()}
               </span>{' '}
               rows detected
@@ -210,7 +210,8 @@ export function ImportDialog({ onImported, children }: { onImported?: () => void
                 Choose another file
               </Button>
               <Button onClick={onCommit} disabled={pending || mapping.companyName == null}>
-                Import {preview.rowCount.toLocaleString()} rows
+                Import <span className="font-mono tabular-nums">{preview.rowCount.toLocaleString()}</span>{' '}
+                rows
               </Button>
             </DialogFooter>
           </div>
@@ -259,7 +260,7 @@ export function ImportDialog({ onImported, children }: { onImported?: () => void
 function Stat({ label, value }: { label: string; value: number }) {
   return (
     <div className="rounded-lg border bg-card p-3">
-      <div className="text-2xl font-semibold tabular-nums tracking-tight">{value}</div>
+      <div className="font-mono text-2xl font-semibold tabular-nums tracking-tight">{value}</div>
       <div className="mt-0.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
         {label}
       </div>
