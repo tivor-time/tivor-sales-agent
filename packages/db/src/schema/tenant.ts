@@ -21,6 +21,9 @@ export const tenants = pgTable(
         about?: string
         timezone?: string
         physicalAddress?: string
+        city?: string
+        state?: string
+        autopilot?: boolean
       }>()
       .notNull()
       .default({}),

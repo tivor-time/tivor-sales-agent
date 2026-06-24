@@ -82,6 +82,11 @@ export function useDisconnectMailbox() {
     mutationFn: async (v: { id: string }) => unwrap(await disconnectMailbox(v)),
     onSuccess: () => toast.success('Mailbox disconnected'),
     onError: (e: ActionThrown) => toast.error(e.message),
-    onSettled: () => qc.invalidateQueries({ queryKey: queryKeys.mailboxes.all }),
+    onSettled: () => {
+      // Disconnecting hides the mailbox AND its inbox mail / activity — refresh all three.
+      qc.invalidateQueries({ queryKey: queryKeys.mailboxes.all })
+      qc.invalidateQueries({ queryKey: queryKeys.inbox.all })
+      qc.invalidateQueries({ queryKey: queryKeys.outreach.activity })
+    },
   })
 }

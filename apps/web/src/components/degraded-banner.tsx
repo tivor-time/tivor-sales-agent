@@ -20,11 +20,11 @@ export function DegradedBanner() {
   return (
     <div
       role="note"
-      className="flex items-start gap-2 rounded-md border border-warning/40 bg-warning/10 px-4 py-2 text-xs text-foreground"
+      className="flex items-start gap-2.5 rounded-lg border border-warning/30 bg-warning/10 px-4 py-2.5 text-xs leading-relaxed text-foreground/90"
     >
       <Info className="mt-0.5 h-4 w-4 shrink-0 text-warning" aria-hidden />
       <span>
-        <span className="font-medium">Dev mode.</span> {notes.join(' | ')}.
+        <span className="font-medium text-foreground">Dev mode.</span> {notes.join(' · ')}.
       </span>
     </div>
   )

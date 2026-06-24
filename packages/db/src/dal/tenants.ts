@@ -11,7 +11,7 @@ import { and, eq, isNull, inArray, ne, lte, isNotNull, or, sql } from 'drizzle-o
 import type { Role, Language } from '@tradepilot/shared'
 import { getDb } from '../client/pool'
 import { withTenantTransaction } from '../client/rls'
-import { tenants, users, memberships, emailIdentities, followUpTasks } from '../schema'
+import { tenants, users, memberships, emailIdentities, followUpTasks, messages } from '../schema'
 import { TenantNotFoundError } from './errors'
 import { makeSecretResolver } from './secrets'
 import type { TenantContextPartial } from './context'
@@ -174,6 +174,59 @@ export async function getTenantProfile(tenantId: string): Promise<{
   }
 }
 
+/** Set the tenant's display name (used by onboarding when the org name is captured). */
+export async function updateTenantName(tenantId: string, name: string): Promise<void> {
+  const db = getDb()
+  await db.update(tenants).set({ name }).where(eq(tenants.id, tenantId))
+}
+
+/** Merge a patch into the tenant's companyProfile JSONB (e.g. the autopilot flag). */
+export async function updateTenantCompanyProfile(
+  tenantId: string,
+  patch: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
+  const db = getDb()
+  const current = await getTenantProfile(tenantId)
+  const merged = { ...current.companyProfile, ...patch }
+  await db.update(tenants).set({ companyProfile: merged }).where(eq(tenants.id, tenantId))
+  return merged
+}
+
+/**
+ * Worker-global: outbound messages scheduled to send whose time has arrived.
+ * Used by the scheduled-sends sweep (Autopilot follow-up cadence). No tenant
+ * context — the cron fans out one tenant-scoped send event per row.
+ */
+export async function listDueScheduledSends(now: Date): Promise<
+  {
+    tenantId: string
+    messageId: string
+    sequenceStepId: string | null
+    leadId: string | null
+    contactId: string | null
+  }[]
+> {
+  const db = getDb()
+  return db
+    .select({
+      tenantId: messages.tenantId,
+      messageId: messages.id,
+      sequenceStepId: messages.sequenceStepId,
+      leadId: messages.leadId,
+      contactId: messages.contactId,
+    })
+    .from(messages)
+    .where(
+      and(
+        eq(messages.direction, 'outbound'),
+        eq(messages.status, 'scheduled'),
+        lte(messages.scheduledAt, now),
+        isNull(messages.deletedAt),
+      ),
+    )
+    .limit(500)
+}
+
 /** Idempotent upsert of a tenant from a Clerk organization. */
 export async function upsertTenantFromClerk(input: ClerkOrgInput): Promise<{ id: string }> {
   const db = getDb()
@@ -191,10 +244,45 @@ export async function upsertTenantFromClerk(input: ClerkOrgInput): Promise<{ id:
   return rows[0]!
 }
 
-/** Idempotent upsert of a user from Clerk. */
+/**
+ * Idempotent upsert of a user from Clerk. The users table is unique on BOTH
+ * clerkUserId AND email, so we reconcile by clerkUserId first, then by email
+ * (e.g. a seeded/imported row that shares the email) — claiming that row for this
+ * Clerk identity rather than hitting the email unique constraint.
+ */
 export async function upsertUserFromClerk(input: ClerkUserInput): Promise<{ id: string }> {
   const db = getDb()
-  const rows = await db
+  const patch = {
+    clerkUserId: input.clerkUserId,
+    email: input.email,
+    firstName: input.firstName ?? null,
+    lastName: input.lastName ?? null,
+    imageUrl: input.imageUrl ?? null,
+    updatedAt: new Date(),
+    deletedAt: null as Date | null,
+  }
+
+  const byClerk = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.clerkUserId, input.clerkUserId))
+    .limit(1)
+  if (byClerk[0]) {
+    await db.update(users).set(patch).where(eq(users.id, byClerk[0].id))
+    return { id: byClerk[0].id }
+  }
+
+  const byEmail = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.email, input.email))
+    .limit(1)
+  if (byEmail[0]) {
+    await db.update(users).set(patch).where(eq(users.id, byEmail[0].id))
+    return { id: byEmail[0].id }
+  }
+
+  const inserted = await db
     .insert(users)
     .values({
       clerkUserId: input.clerkUserId,
@@ -203,18 +291,8 @@ export async function upsertUserFromClerk(input: ClerkUserInput): Promise<{ id: 
       lastName: input.lastName ?? null,
       imageUrl: input.imageUrl ?? null,
     })
-    .onConflictDoUpdate({
-      target: users.clerkUserId,
-      set: {
-        email: input.email,
-        firstName: input.firstName ?? null,
-        lastName: input.lastName ?? null,
-        imageUrl: input.imageUrl ?? null,
-        updatedAt: new Date(),
-      },
-    })
     .returning({ id: users.id })
-  return rows[0]!
+  return inserted[0]!
 }
 
 /** Idempotent upsert of a membership, creating minimal tenant/user stubs if needed. */

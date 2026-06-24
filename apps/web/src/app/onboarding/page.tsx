@@ -1,24 +1,25 @@
-import Link from 'next/link'
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
+import { redirect } from 'next/navigation'
+import { auth } from '@clerk/nextjs/server'
+import { flags } from '@tradepilot/shared/env'
+import { OnboardingForm } from '@/components/onboarding/onboarding-form'
 
-export default function OnboardingPage() {
+export default async function OnboardingPage() {
+  // Dev (zero-secrets) mode: no Clerk, no org concept — go straight in.
+  if (!flags.isAuthEnabled) redirect('/dashboard')
+
+  const { userId, orgId } = await auth()
+  if (!userId) redirect('/sign-in')
+  if (orgId) redirect('/dashboard') // already onboarded
+
   return (
-    <div className="grid min-h-svh place-items-center bg-background p-6">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle>Welcome to TradePilot</CardTitle>
-          <CardDescription>
-            The guided setup wizard — company profile, catalog, target markets &amp; languages,
-            connect mailbox, and verify domain auth — is coming next.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button asChild>
-            <Link href="/dashboard">Go to dashboard</Link>
-          </Button>
-        </CardContent>
-      </Card>
+    <div className="dark relative grid min-h-svh place-items-center overflow-hidden bg-background p-6 text-foreground">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 h-[420px] bg-[radial-gradient(60%_100%_at_50%_-10%,hsl(var(--primary)/0.14),transparent_70%)]"
+      />
+      <div className="relative w-full max-w-md">
+        <OnboardingForm />
+      </div>
     </div>
   )
 }

@@ -1,26 +1,65 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { Bot, Loader2, Send, Sparkles, X } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import Link from 'next/link'
+import { Bot, Inbox, Mail, Maximize2, Send, Sparkles, Users, X } from 'lucide-react'
 import { useFlags } from '@/lib/flags-context'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
-
-type Msg = { role: 'user' | 'assistant'; content: string }
+import { MarkdownMessage } from './markdown-message'
+import { useCopilotChat, type CopilotMsg } from './use-copilot-chat'
 
 const SUGGESTIONS = [
-  'Who are my top leads?',
-  'Any new replies in my inbox?',
-  'Draft an intro email to my best lead',
+  { icon: Users, prompt: 'Who are my top leads?' },
+  { icon: Inbox, prompt: 'Any new replies in my inbox?' },
+  { icon: Mail, prompt: 'Draft an intro email to my best lead' },
 ]
+
+function AssistantAvatar() {
+  return (
+    <div className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary ring-1 ring-inset ring-primary/20">
+      <Sparkles className="h-3.5 w-3.5" />
+    </div>
+  )
+}
+
+function Bubble({ msg }: { msg: CopilotMsg }) {
+  if (msg.role === 'assistant') {
+    return (
+      <div className="flex gap-2">
+        <AssistantAvatar />
+        <div className="max-w-[85%] rounded-xl rounded-tl-sm border bg-background px-3 py-2 shadow-sm">
+          <MarkdownMessage content={msg.content} />
+        </div>
+      </div>
+    )
+  }
+  return (
+    <div className="flex justify-end">
+      <div className="max-w-[85%] whitespace-pre-wrap rounded-xl rounded-tr-sm bg-primary px-3 py-2 text-sm leading-relaxed text-primary-foreground shadow-sm">
+        {msg.content}
+      </div>
+    </div>
+  )
+}
+
+function TypingDots() {
+  return (
+    <div className="flex gap-2">
+      <AssistantAvatar />
+      <div className="flex items-center gap-1 rounded-xl rounded-tl-sm border bg-background px-3 py-2.5 shadow-sm">
+        <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground/70 [animation-delay:-0.3s]" />
+        <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground/70 [animation-delay:-0.15s]" />
+        <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground/70" />
+      </div>
+    </div>
+  )
+}
 
 export function CopilotWidget() {
   const flags = useFlags()
   const [open, setOpen] = useState(false)
-  const [messages, setMessages] = useState<Msg[]>([])
-  const [input, setInput] = useState('')
-  const [loading, setLoading] = useState(false)
+  const { messages, input, setInput, loading, send } = useCopilotChat()
   const scrollRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -29,110 +68,86 @@ export function CopilotWidget() {
 
   if (!flags.isAiEnabled) return null
 
-  async function send(text: string) {
-    const content = text.trim()
-    if (!content || loading) return
-    const next: Msg[] = [...messages, { role: 'user', content }]
-    setMessages(next)
-    setInput('')
-    setLoading(true)
-    try {
-      const res = await fetch('/api/ai/chat', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ messages: next }),
-      })
-      const data = (await res.json()) as { reply?: string }
-      setMessages([...next, { role: 'assistant', content: data.reply || '(no response)' }])
-    } catch {
-      setMessages([...next, { role: 'assistant', content: 'Network error — please try again.' }])
-    } finally {
-      setLoading(false)
-    }
-  }
-
   if (!open) {
     return (
       <button
         type="button"
         onClick={() => setOpen(true)}
         aria-label="Open AI copilot"
-        className="fixed bottom-5 right-5 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        className="group fixed bottom-5 right-5 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg ring-1 ring-inset ring-primary-foreground/10 transition-transform hover:scale-105 active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background"
       >
-        <Bot className="h-6 w-6" />
+        <Bot className="h-6 w-6 transition-transform group-hover:rotate-6" />
       </button>
     )
   }
 
   return (
-    <div className="fixed bottom-5 right-5 z-40 flex h-[560px] max-h-[calc(100svh-2.5rem)] w-[calc(100vw-2.5rem)] max-w-[400px] flex-col overflow-hidden rounded-xl border bg-card shadow-2xl">
-      <div className="flex items-center justify-between border-b px-4 py-3">
-        <div className="flex items-center gap-2">
-          <div className="grid h-7 w-7 place-items-center rounded-md bg-primary/15 text-primary">
+    <div className="fixed bottom-5 right-5 z-40 flex h-[560px] max-h-[calc(100svh-2.5rem)] w-[calc(100vw-2.5rem)] max-w-[400px] flex-col overflow-hidden rounded-2xl border bg-card shadow-xl">
+      <div className="flex items-center justify-between border-b bg-card px-4 py-3">
+        <div className="flex items-center gap-2.5">
+          <div className="relative grid h-8 w-8 place-items-center rounded-lg bg-primary/10 text-primary ring-1 ring-inset ring-primary/20">
             <Sparkles className="h-4 w-4" />
+            <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-card bg-success" />
           </div>
           <div className="leading-tight">
-            <p className="text-sm font-semibold">Sales Copilot</p>
-            <p className="text-[11px] text-muted-foreground">Find leads · read inbox · draft & send</p>
+            <p className="text-sm font-semibold tracking-tight">Sales Copilot</p>
+            <p className="text-[11px] text-muted-foreground">Find leads · read inbox · draft &amp; send</p>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={() => setOpen(false)}
-          aria-label="Close copilot"
-          className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
-        >
-          <X className="h-4 w-4" />
-        </button>
+        <div className="flex items-center gap-0.5">
+          <Link
+            href="/copilot"
+            onClick={() => setOpen(false)}
+            aria-label="Open full screen"
+            title="Open full screen"
+            className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <Maximize2 className="h-4 w-4" />
+          </Link>
+          <button
+            type="button"
+            onClick={() => setOpen(false)}
+            aria-label="Close copilot"
+            className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
       </div>
 
-      <div ref={scrollRef} className="min-h-0 flex-1 space-y-3 overflow-auto p-4">
+      <div ref={scrollRef} className="min-h-0 flex-1 space-y-4 overflow-auto scrollbar-thin bg-background p-4">
         {messages.length === 0 ? (
-          <div className="space-y-3 pt-2">
-            <p className="text-sm text-muted-foreground">
-              Ask me to find leads, summarize new replies, or draft and send an email.
+          <div className="space-y-4 pt-1">
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              Ask me to find leads, summarize replies, or draft and send an email.
             </p>
             <div className="flex flex-col gap-2">
-              {SUGGESTIONS.map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => send(s)}
-                  className="rounded-md border bg-muted/30 px-3 py-2 text-left text-xs hover:bg-muted"
-                >
-                  {s}
-                </button>
-              ))}
+              {SUGGESTIONS.map((s) => {
+                const Icon = s.icon
+                return (
+                  <button
+                    key={s.prompt}
+                    type="button"
+                    onClick={() => send(s.prompt)}
+                    className="group flex items-center gap-2.5 rounded-lg border bg-card px-3 py-2.5 text-left text-xs font-medium text-foreground shadow-sm transition-all hover:border-primary/40 hover:shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <span className="grid h-6 w-6 shrink-0 place-items-center rounded-md bg-primary/10 text-primary transition-colors group-hover:bg-primary/15">
+                      <Icon className="h-3.5 w-3.5" />
+                    </span>
+                    {s.prompt}
+                  </button>
+                )
+              })}
             </div>
           </div>
         ) : (
-          messages.map((m, i) => (
-            <div
-              key={i}
-              className={cn('flex', m.role === 'user' ? 'justify-end' : 'justify-start')}
-            >
-              <div
-                className={cn(
-                  'max-w-[85%] whitespace-pre-wrap rounded-lg px-3 py-2 text-sm',
-                  m.role === 'user'
-                    ? 'bg-primary text-primary-foreground'
-                    : 'border bg-muted/40 text-foreground',
-                )}
-              >
-                {m.content}
-              </div>
-            </div>
-          ))
+          messages.map((m, i) => <Bubble key={i} msg={m} />)
         )}
-        {loading && (
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Loader2 className="h-3.5 w-3.5 animate-spin" /> Thinking…
-          </div>
-        )}
+        {loading && <TypingDots />}
       </div>
 
-      <div className="border-t p-3">
-        <div className="flex items-end gap-2">
+      <div className="border-t bg-card p-3">
+        <div className="flex items-end gap-2 rounded-xl border border-input bg-background p-1.5 shadow-sm transition-colors focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-ring/40">
           <Textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -144,10 +159,11 @@ export function CopilotWidget() {
             }}
             placeholder="Message the copilot…"
             rows={1}
-            className="max-h-32 min-h-[40px] resize-none"
+            className="max-h-32 min-h-[36px] resize-none border-0 bg-transparent px-2 py-1.5 shadow-none hover:border-0 focus-visible:ring-0 focus-visible:ring-offset-0"
           />
           <Button
             size="icon"
+            className="h-9 w-9 shrink-0"
             onClick={() => void send(input)}
             disabled={loading || !input.trim()}
             aria-label="Send"

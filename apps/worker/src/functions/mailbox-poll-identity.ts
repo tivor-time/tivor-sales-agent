@@ -4,7 +4,7 @@ import { decrypt, encrypt, runInTenant, schema } from '@tradepilot/db'
 import { and, eq } from 'drizzle-orm'
 import { inngest } from '../client'
 import { resolveWorkerTenant } from '../lib/tenant'
-import { eventLogger } from '../lib/logger'
+import { eventLogger, log as baseLog } from '../lib/logger'
 
 export const EVENT = 'mailbox/poll.identity' as const
 
@@ -107,17 +107,26 @@ export async function handleMailboxPollIdentity(rawData: unknown, requestId: str
     }
   }
 
-  // Advance the incremental cursor (its own tx), regardless of per-message results.
-  await runInTenant(partial, async (ctx) => {
-    await ctx.db.emailIdentities.update(identity.id, { providerState: result.providerState })
-  })
-
-  // Emit one classify event per NEW message, after commit.
-  for (const providerMessageId of newIds) {
-    await inngest.send({
-      name: 'email/inbound.received',
-      data: { tenantId, emailIdentityId: identity.id, providerMessageId },
+  // Advance the incremental cursor (its own tx). Best-effort — a cursor write
+  // failure must not abort the (already-persisted) batch or fail the poll.
+  try {
+    await runInTenant(partial, async (ctx) => {
+      await ctx.db.emailIdentities.update(identity.id, { providerState: result.providerState })
     })
+  } catch (e) {
+    log.warn({ err: e }, 'cursor advance failed')
+  }
+
+  // Emit one classify event per NEW message, after commit. Best-effort.
+  for (const providerMessageId of newIds) {
+    try {
+      await inngest.send({
+        name: 'email/inbound.received',
+        data: { tenantId, emailIdentityId: identity.id, providerMessageId },
+      })
+    } catch (e) {
+      log.warn({ err: e, providerMessageId }, 'inbound.received emit failed')
+    }
   }
   if (newIds.length) log.info({ count: newIds.length }, 'inbound messages ingested')
 }
@@ -125,6 +134,13 @@ export async function handleMailboxPollIdentity(rawData: unknown, requestId: str
 export const mailboxPollIdentity = inngest.createFunction(
   { id: 'mailbox-poll-identity', retries: 3, triggers: [{ event: EVENT }] },
   async ({ event, runId }) => {
-    await handleMailboxPollIdentity(event.data, runId)
+    // A recurring poll is best-effort: never hard-fail (which returns 500 and storms
+    // retries every tick). Log and move on — the next tick retries, and the inline
+    // "Sync inbox" action is the user-facing path.
+    try {
+      await handleMailboxPollIdentity(event.data, runId)
+    } catch (err) {
+      baseLog.error({ err, event: EVENT }, 'mailbox-poll-identity failed (swallowed)')
+    }
   },
 )

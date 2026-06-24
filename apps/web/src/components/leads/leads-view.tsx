@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { Search, Users, Database, Trash2 } from 'lucide-react'
+import { Search, Users, Database, Trash2, ChevronRight } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import {
@@ -19,10 +19,13 @@ import { useLeads, useUpdateLeadStage, useBulkSetStage, useBulkDeleteLeads } fro
 import { cn } from '@/lib/utils'
 import { ImportDialog } from './import-dialog'
 import { GenerateOutreachDialog } from '@/components/outreach/generate-dialog'
-import { IcpScore, STAGE_LABELS, LEAD_STAGES } from './stage'
+import { IcpScore, StageDot, STAGE_LABELS, LEAD_STAGES } from './stage'
 
 const PAGE_SIZE = 25
 type LeadStage = (typeof LEAD_STAGES)[number]
+
+const SELECT_CLASS =
+  'h-8 rounded-md border border-input bg-background px-2.5 text-xs font-medium text-foreground ring-offset-background transition-colors hover:border-foreground/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1'
 
 export function LeadsView() {
   const [searchInput, setSearchInput] = useState('')
@@ -79,10 +82,10 @@ export function LeadsView() {
     <div className="space-y-4">
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-2">
-        <div className="relative min-w-[220px] flex-1">
-          <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <div className="relative min-w-[240px] flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            className="pl-8"
+            className="pl-9"
             placeholder="Search company or domain…"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
@@ -93,28 +96,32 @@ export function LeadsView() {
       </div>
 
       {/* Stage filter chips */}
-      <div className="flex flex-wrap gap-1.5">
-        {LEAD_STAGES.map((s) => (
-          <button
-            key={s}
-            type="button"
-            onClick={() => toggleStageFilter(s)}
-            aria-pressed={stages.includes(s)}
-            className={cn(
-              'rounded-full border px-2.5 py-0.5 text-xs transition-colors',
-              stages.includes(s)
-                ? 'border-primary bg-primary/10 text-primary'
-                : 'text-muted-foreground hover:bg-muted',
-            )}
-          >
-            {STAGE_LABELS[s]}
-          </button>
-        ))}
+      <div className="flex flex-wrap items-center gap-1.5">
+        {LEAD_STAGES.map((s) => {
+          const active = stages.includes(s)
+          return (
+            <button
+              key={s}
+              type="button"
+              onClick={() => toggleStageFilter(s)}
+              aria-pressed={active}
+              className={cn(
+                'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors',
+                active
+                  ? 'border-primary/30 bg-primary/10 text-primary'
+                  : 'border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground',
+              )}
+            >
+              <StageDot stage={s} className={cn(!active && 'opacity-70')} />
+              {STAGE_LABELS[s]}
+            </button>
+          )
+        })}
         {stages.length > 0 && (
           <button
             type="button"
             onClick={() => setStages([])}
-            className="px-2 py-0.5 text-xs text-muted-foreground underline-offset-2 hover:underline"
+            className="ml-1 px-2 py-1 text-xs font-medium text-muted-foreground underline-offset-2 transition-colors hover:text-foreground hover:underline"
           >
             Clear
           </button>
@@ -123,10 +130,11 @@ export function LeadsView() {
 
       {/* Bulk action bar */}
       {selectedIds.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2 rounded-md border bg-muted/40 px-3 py-2 text-sm">
-          <span className="font-medium">{selectedIds.length} selected</span>
+        <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-card px-3 py-2 text-sm shadow-sm">
+          <span className="font-medium tabular-nums">{selectedIds.length} selected</span>
+          <span className="mx-1 hidden h-4 w-px bg-border sm:block" aria-hidden />
           <select
-            className="h-8 rounded-md border border-input bg-background px-2 text-sm"
+            className={SELECT_CLASS}
             defaultValue=""
             onChange={(e) => {
               if (e.target.value) {
@@ -135,6 +143,7 @@ export function LeadsView() {
               }
               e.currentTarget.value = ''
             }}
+            aria-label="Set stage for selected leads"
           >
             <option value="">Set stage…</option>
             {LEAD_STAGES.map((s) => (
@@ -154,6 +163,13 @@ export function LeadsView() {
           >
             <Trash2 className="h-4 w-4" /> Delete
           </Button>
+          <button
+            type="button"
+            onClick={() => setSelected(new Set())}
+            className="ml-auto px-2 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+          >
+            Clear selection
+          </button>
         </div>
       )}
 
@@ -177,68 +193,78 @@ export function LeadsView() {
         />
       ) : (
         <>
-          <div className="rounded-lg border">
+          <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead className="w-8">
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="w-10 pl-4">
                     <input
                       type="checkbox"
                       aria-label="Select all"
+                      className="h-3.5 w-3.5 cursor-pointer accent-primary"
                       checked={selected.size === rows.length && rows.length > 0}
                       onChange={toggleSelectAll}
                     />
                   </TableHead>
-                  <TableHead>Company</TableHead>
-                  <TableHead>Country</TableHead>
-                  <TableHead>Stage</TableHead>
-                  <TableHead>ICP</TableHead>
-                  <TableHead className="text-right">Updated</TableHead>
+                  <TableHead className="uppercase tracking-wide">Company</TableHead>
+                  <TableHead className="uppercase tracking-wide">Country</TableHead>
+                  <TableHead className="uppercase tracking-wide">Stage</TableHead>
+                  <TableHead className="uppercase tracking-wide">ICP</TableHead>
+                  <TableHead className="pr-4 text-right uppercase tracking-wide">Updated</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {rows.map((lead) => (
-                  <TableRow key={lead.id} data-state={selected.has(lead.id) ? 'selected' : undefined}>
-                    <TableCell>
+                  <TableRow
+                    key={lead.id}
+                    data-state={selected.has(lead.id) ? 'selected' : undefined}
+                    className="group"
+                  >
+                    <TableCell className="pl-4">
                       <input
                         type="checkbox"
                         aria-label={`Select ${lead.companyName}`}
+                        className="h-3.5 w-3.5 cursor-pointer accent-primary"
                         checked={selected.has(lead.id)}
                         onChange={() => toggleSelect(lead.id)}
                       />
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="max-w-[280px]">
                       <Link
                         href={`/leads/${lead.id}`}
-                        className="font-medium text-foreground hover:text-primary hover:underline"
+                        className="inline-flex items-center gap-1 truncate font-medium text-foreground transition-colors hover:text-primary"
                       >
-                        {lead.companyName}
+                        <span className="truncate">{lead.companyName}</span>
+                        <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
                       </Link>
                       {lead.domain && (
-                        <div className="text-xs text-muted-foreground">{lead.domain}</div>
+                        <div className="truncate text-xs text-muted-foreground">{lead.domain}</div>
                       )}
                     </TableCell>
-                    <TableCell className="text-sm">{lead.country ?? '—'}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{lead.country ?? '—'}</TableCell>
                     <TableCell>
-                      <select
-                        className="rounded-md border border-input bg-background px-2 py-1 text-xs"
-                        value={lead.stage}
-                        onChange={(e) =>
-                          updateStage.mutate({ id: lead.id, stage: e.target.value as never })
-                        }
-                        aria-label={`Stage for ${lead.companyName}`}
-                      >
-                        {LEAD_STAGES.map((s) => (
-                          <option key={s} value={s}>
-                            {STAGE_LABELS[s]}
-                          </option>
-                        ))}
-                      </select>
+                      <div className="relative inline-flex items-center">
+                        <StageDot stage={lead.stage} className="pointer-events-none absolute left-2.5" />
+                        <select
+                          className={cn(SELECT_CLASS, 'pl-6')}
+                          value={lead.stage}
+                          onChange={(e) =>
+                            updateStage.mutate({ id: lead.id, stage: e.target.value as never })
+                          }
+                          aria-label={`Stage for ${lead.companyName}`}
+                        >
+                          {LEAD_STAGES.map((s) => (
+                            <option key={s} value={s}>
+                              {STAGE_LABELS[s]}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
                     </TableCell>
                     <TableCell>
                       <IcpScore score={lead.icpScore} />
                     </TableCell>
-                    <TableCell className="text-right text-xs text-muted-foreground">
+                    <TableCell className="pr-4 text-right text-xs tabular-nums text-muted-foreground">
                       {new Date(lead.updatedAt).toLocaleDateString()}
                     </TableCell>
                   </TableRow>
@@ -249,7 +275,7 @@ export function LeadsView() {
 
           {/* Pagination */}
           <div className="flex items-center justify-between text-sm text-muted-foreground">
-            <span>
+            <span className="tabular-nums">
               {data?.total.toLocaleString()} lead{data?.total === 1 ? '' : 's'} · page {page} of{' '}
               {pageCount}
             </span>
