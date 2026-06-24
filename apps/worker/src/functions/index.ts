@@ -6,6 +6,8 @@ import { mailboxPoll } from './mailbox-poll'
 import { mailboxPollIdentity } from './mailbox-poll-identity'
 import { emailInboundReceived } from './email-inbound-received'
 import { emailBounceReceived } from './email-bounce-received'
+import { unipileMailingEvent } from './unipile-mailing-event'
+import { unipileAccountStatus } from './unipile-account-status'
 
 /**
  * The single registration surface passed to serve(). Append new handlers here as
@@ -20,4 +22,6 @@ export const functions = [
   mailboxPollIdentity,
   emailInboundReceived,
   emailBounceReceived,
+  unipileMailingEvent,
+  unipileAccountStatus,
 ]

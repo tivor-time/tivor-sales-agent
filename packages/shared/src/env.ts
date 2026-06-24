@@ -19,6 +19,17 @@ const opt = z
   .optional()
   .catch(undefined)
 
+/** Optional boolean env parser with permissive true values. */
+const optBool = z
+  .union([z.string(), z.boolean()])
+  .optional()
+  .transform((v) => {
+    if (typeof v === 'boolean') return v
+    if (!v) return false
+    return ['1', 'true', 'yes', 'on'].includes(v.trim().toLowerCase())
+  })
+  .catch(false)
+
 const rawSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   LOG_LEVEL: z
@@ -33,7 +44,10 @@ const rawSchema = z.object({
   // Database (Neon / Postgres)
   DATABASE_URL: opt,
 
-  // AI (Anthropic Claude). Model is defaulted, not optional.
+  // AI (OpenAI preferred, Anthropic optional fallback). Models are defaulted.
+  OPENAI_API_KEY: opt,
+  OPENAI_MODEL: z.string().default('gpt-4.1'),
+  OPENAI_MODEL_FAST: z.string().default('gpt-4.1-mini'),
   ANTHROPIC_API_KEY: opt,
   ANTHROPIC_MODEL: z.string().default('claude-opus-4-8'),
   ANTHROPIC_MODEL_FAST: z.string().default('claude-sonnet-4-6'),
@@ -46,6 +60,9 @@ const rawSchema = z.object({
   MS_GRAPH_CLIENT_SECRET: opt,
   MS_GRAPH_TENANT_ID: opt,
   MS_GRAPH_REDIRECT_URI: opt,
+  UNIPILE_DSN: opt,
+  UNIPILE_API_KEY: opt,
+  UNIPILE_WEBHOOK_SECRET: opt,
 
   // Transactional email
   RESEND_API_KEY: opt,
@@ -80,6 +97,9 @@ const rawSchema = z.object({
   // Secret storage (encrypt OAuth tokens / provider keys at rest)
   MASTER_ENCRYPTION_KEY: opt,
 
+  // DEV/launch override: allow sending without SPF/DKIM/DMARC verification.
+  ALLOW_UNVERIFIED_SENDING: optBool,
+
   // App URL (used for OAuth redirects, webhook URLs, unsubscribe links)
   APP_URL: z.string().url().default('http://localhost:3000'),
 })
@@ -104,6 +124,7 @@ const isMsGraphEnabled = has(
   env.MS_GRAPH_TENANT_ID,
   env.MS_GRAPH_REDIRECT_URI,
 )
+const isUnipileEnabled = has(env.UNIPILE_DSN, env.UNIPILE_API_KEY, env.UNIPILE_WEBHOOK_SECRET)
 
 /**
  * Feature flags derived ONCE from key presence and consumed everywhere. This is
@@ -113,10 +134,13 @@ export const flags = {
   isAuthEnabled: has(env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY, env.CLERK_SECRET_KEY),
   isClerkWebhookEnabled: has(env.CLERK_WEBHOOK_SIGNING_SECRET),
   isDatabaseEnabled: has(env.DATABASE_URL),
-  isAiEnabled: has(env.ANTHROPIC_API_KEY),
+  isOpenAiEnabled: has(env.OPENAI_API_KEY),
+  isAnthropicEnabled: has(env.ANTHROPIC_API_KEY),
+  isAiEnabled: hasAny(env.OPENAI_API_KEY, env.ANTHROPIC_API_KEY),
   isGmailEnabled,
   isMsGraphEnabled,
-  isAnyMailboxProviderConfigured: isGmailEnabled || isMsGraphEnabled,
+  isUnipileEnabled,
+  isAnyMailboxProviderConfigured: isGmailEnabled || isMsGraphEnabled || isUnipileEnabled,
   isResendEnabled: has(env.RESEND_API_KEY),
   isBillingEnabled: has(env.STRIPE_SECRET_KEY, env.STRIPE_WEBHOOK_SECRET),
   isJobsEnabled: has(env.INNGEST_EVENT_KEY, env.INNGEST_SIGNING_KEY),
@@ -130,6 +154,9 @@ export const flags = {
   ),
   isEnrichmentEnabled: hasAny(env.APOLLO_API_KEY, env.HUNTER_API_KEY),
   isSecretStorageEnabled: has(env.MASTER_ENCRYPTION_KEY),
+  // DEV/launch escape hatch only — never honored in production, so a stray
+  // ALLOW_UNVERIFIED_SENDING=true can't push unauthenticated mail from a prod deploy.
+  isDomainAuthBypassEnabled: env.ALLOW_UNVERIFIED_SENDING && env.NODE_ENV !== 'production',
 } as const
 
 export type Flags = typeof flags
@@ -143,7 +170,7 @@ export function isSendingEnabled(opts: { hasVerifiedDomainAuth: boolean }): bool
   return (
     flags.isAnyMailboxProviderConfigured &&
     flags.isSecretStorageEnabled &&
-    opts.hasVerifiedDomainAuth
+    (opts.hasVerifiedDomainAuth || flags.isDomainAuthBypassEnabled)
   )
 }
 

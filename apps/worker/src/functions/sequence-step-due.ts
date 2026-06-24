@@ -1,7 +1,7 @@
 import { parseEvent } from '@tradepilot/shared'
-import { isSendingEnabled } from '@tradepilot/shared/env'
+import { flags, isSendingEnabled } from '@tradepilot/shared/env'
 import { canSend } from '@tradepilot/shared/deliverability'
-import { getMailboxProvider } from '@tradepilot/shared/providers/server'
+import { getMailboxProviderForIdentity } from '@tradepilot/shared/providers/server'
 import { decrypt, encrypt, runInTenant, schema } from '@tradepilot/db'
 import { and, eq, gt, isNull, inArray, or } from 'drizzle-orm'
 import { inngest } from '../client'
@@ -90,6 +90,7 @@ export async function handleSequenceStepDue(rawData: unknown, requestId: string)
       spf: identity.spfStatus,
       dkim: identity.dkimStatus,
       dmarc: identity.dmarcStatus,
+      allowUnverifiedDomainAuth: flags.isDomainAuthBypassEnabled,
       warmupState: identity.warmupState,
       sentToday: identity.sentToday,
       dailyCap: identity.dailyCap,
@@ -97,6 +98,12 @@ export async function handleSequenceStepDue(rawData: unknown, requestId: string)
     if (!gate.allowed) {
       log.info({ reason: gate.reason }, 'canSend denied — message held')
       return null
+    }
+    if (flags.isDomainAuthBypassEnabled && !identity.domainVerifiedAt) {
+      log.warn(
+        { messageId, identityId: identity.id, to: message.toAddress },
+        'SENDING UNDER DOMAIN-AUTH BYPASS — SPF/DKIM/DMARC not verified for this mailbox',
+      )
     }
 
     // Claim. The DAL update is not status-conditional, but nothing in P3 produces
@@ -122,7 +129,7 @@ export async function handleSequenceStepDue(rawData: unknown, requestId: string)
   if (!claim) return
 
   const { identity, send } = claim
-  const provider = getMailboxProvider(identity.provider as 'gmail' | 'microsoft')
+  const provider = getMailboxProviderForIdentity(identity)
 
   const markFailed = (reason: string) =>
     runInTenant(partial, async (ctx) => {

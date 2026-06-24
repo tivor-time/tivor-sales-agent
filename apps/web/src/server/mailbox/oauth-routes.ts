@@ -3,12 +3,24 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { runInTenant, encrypt, schema } from '@tradepilot/db'
 import { and, eq, isNull } from 'drizzle-orm'
 import { env, flags } from '@tradepilot/shared/env'
-import { getMailboxProvider } from '@tradepilot/shared/providers/server'
+import { getMailboxProvider, isUnipileLinked } from '@tradepilot/shared/providers/server'
 import { resolveTenantContext } from '@/lib/auth/resolve-tenant'
 import { requireRole } from '@/lib/auth/roles'
 import { newPkce, packState, unpackState, type OAuthProvider } from './oauth-state'
 
 const { emailIdentities } = schema
+
+function stripUnipileState(state: Record<string, unknown> | null | undefined): Record<string, unknown> {
+  if (!state) return {}
+  const next = { ...state }
+  delete next.unipileAccountId
+  delete next.unipileStatus
+  delete next.unipileStatusUpdatedAt
+  delete next.unipileType
+  delete next.unipileSources
+  delete next.unipileLastPayload
+  return next
+}
 
 function providerEnabled(provider: OAuthProvider): boolean {
   const providerKeyed = provider === 'gmail' ? flags.isGmailEnabled : flags.isMsGraphEnabled
@@ -65,11 +77,17 @@ export async function oauthCallback(req: NextRequest, provider: OAuthProvider): 
       const existing = await ctx.db.emailIdentities.findFirst(
         and(eq(emailIdentities.email, tokens.email), isNull(emailIdentities.deletedAt))!,
       )
+      // Never convert a Unipile-linked mailbox into a direct-OAuth one: it would
+      // strip its account_id (breaking inbound routing) and clobber its tokens.
+      if (existing && isUnipileLinked(existing.providerState)) {
+        throw new Error('This mailbox is connected via Unipile; disconnect it there first.')
+      }
       const patch = {
         accessTokenEnc: encrypt(tokens.accessToken, ctx.tenantId),
         refreshTokenEnc: tokens.refreshToken ? encrypt(tokens.refreshToken, ctx.tenantId) : null,
         tokenExpiresAt: tokens.expiresAt ?? null,
         scopes: tokens.scopes,
+        providerState: stripUnipileState(existing?.providerState),
       }
       if (existing) {
         await ctx.db.emailIdentities.update(existing.id, patch)

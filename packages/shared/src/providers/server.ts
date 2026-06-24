@@ -9,6 +9,7 @@ import { flags } from '../env'
 import type { MailboxProvider } from './types'
 import { gmailProvider } from './mailbox/gmail'
 import { msGraphProvider } from './mailbox/msgraph'
+import { unipileProvider } from './mailbox/unipile'
 import { noopMailbox } from './noop'
 
 export type OAuthProvider = 'gmail' | 'microsoft'
@@ -17,6 +18,25 @@ export type OAuthProvider = 'gmail' | 'microsoft'
 export function getMailboxProvider(provider: OAuthProvider): MailboxProvider {
   if (provider === 'gmail') return flags.isGmailEnabled ? gmailProvider : noopMailbox
   if (provider === 'microsoft') return flags.isMsGraphEnabled ? msGraphProvider : noopMailbox
+  return noopMailbox
+}
+
+/** Whether an identity is linked through Unipile (providerState holds its account id). */
+export function isUnipileLinked(providerState: Record<string, unknown> | null | undefined): boolean {
+  return typeof providerState?.unipileAccountId === 'string' && providerState.unipileAccountId.length > 0
+}
+
+/**
+ * Resolve the effective mailbox adapter for a stored identity. Unipile-linked
+ * identities route through the Unipile adapter regardless of provider enum.
+ */
+export function getMailboxProviderForIdentity(identity: {
+  provider: string
+  providerState?: Record<string, unknown> | null
+}): MailboxProvider {
+  if (flags.isUnipileEnabled && isUnipileLinked(identity.providerState)) return unipileProvider
+  if (identity.provider === 'gmail') return flags.isGmailEnabled ? gmailProvider : noopMailbox
+  if (identity.provider === 'microsoft') return flags.isMsGraphEnabled ? msGraphProvider : noopMailbox
   return noopMailbox
 }
 

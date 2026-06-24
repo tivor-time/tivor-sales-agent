@@ -19,7 +19,8 @@ export default function CampaignsPage() {
           <CardDescription>
             Select leads on the Leads page and choose “Draft outreach” to generate a localized 4-step
             sequence (Day 1 / 3 / 7 / 14) in each buyer’s language. Drafts land in the Approval Queue —
-            nothing sends until you approve, and sending stays off until domain auth verifies.
+            review and approve, then they send through your connected mailbox. Turn on Autopilot to
+            skip approval and let the AI send + follow up automatically.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-2">
@@ -28,6 +29,9 @@ export default function CampaignsPage() {
           </Button>
           <Button asChild variant="outline">
             <Link href="/approvals">Approval Queue</Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link href="/inbox">Open Inbox</Link>
           </Button>
         </CardContent>
       </Card>

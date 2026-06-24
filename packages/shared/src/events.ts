@@ -45,6 +45,18 @@ export const eventSchemas = {
     emailIdentityId: z.string().uuid(),
     providerMessageId: z.string(),
   }),
+  'unipile/mailing.event': tenantScoped.extend({
+    emailIdentityId: z.string().uuid(),
+    accountId: z.string(),
+    event: z.enum(['mail_received', 'mail_sent', 'mail_moved']),
+    payload: z.record(z.string(), z.unknown()).default({}),
+  }),
+  'unipile/account.status': tenantScoped.extend({
+    emailIdentityId: z.string().uuid(),
+    accountId: z.string(),
+    status: z.string(),
+    payload: z.record(z.string(), z.unknown()).default({}),
+  }),
   'usage/flush.requested': tenantScoped,
   'import/file.uploaded': tenantScoped.extend({
     storageKey: z.string(),

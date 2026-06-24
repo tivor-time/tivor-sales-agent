@@ -6,6 +6,7 @@ import { queryKeys } from './keys'
 import { unwrap } from './leads'
 import {
   listPendingDrafts,
+  listOutreachActivity,
   generateCampaignDrafts,
   approveDraft,
   rejectDraft,
@@ -21,6 +22,14 @@ export function usePendingDrafts() {
   return useQuery({
     queryKey: queryKeys.outreach.pending,
     queryFn: async () => unwrap(await listPendingDrafts()),
+    staleTime: 15_000,
+  })
+}
+
+export function useOutreachActivity() {
+  return useQuery({
+    queryKey: queryKeys.outreach.activity,
+    queryFn: async () => unwrap(await listOutreachActivity()),
     staleTime: 15_000,
   })
 }
@@ -43,7 +52,7 @@ export function useApproveDraft() {
   return useMutation({
     mutationFn: async (v: { id: string }) => unwrap(await approveDraft(v)),
     onSuccess: () => {
-      toast.success('Approved — queued (sending stays off until domain auth verifies)')
+      toast.success('Approved — queued to send')
       qc.invalidateQueries({ queryKey: queryKeys.outreach.pending })
     },
     onError: (e: ThrownError) => toast.error(e.message),

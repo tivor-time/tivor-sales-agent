@@ -5,7 +5,7 @@ import { DegradedBanner } from '@/components/degraded-banner'
 const KPIS = [
   { label: 'Pipeline value', value: '—', note: 'Tracked from P5', icon: TrendingUp },
   { label: 'Active leads', value: '—', note: 'Import in P1', icon: Users },
-  { label: 'Deliverability', value: 'Sending off', note: 'Verify domain auth (P3)', icon: ShieldCheck },
+  { label: 'Deliverability', value: 'Via Gmail', note: 'Sent through your mailbox', icon: ShieldCheck },
   { label: 'Latest brief', value: 'None yet', note: 'Weekly briefs in P7', icon: FileText },
 ]
 

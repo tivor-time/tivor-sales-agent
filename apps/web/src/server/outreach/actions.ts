@@ -1,7 +1,7 @@
 'use server'
 
 import { runInTenant, schema, getTenantProfile } from '@tradepilot/db'
-import { and, eq, isNull, inArray, desc } from 'drizzle-orm'
+import { and, eq, isNull, inArray, desc, sql } from 'drizzle-orm'
 import { env } from '@tradepilot/shared/env'
 import { DEFAULT_SEQUENCE_STEPS, scoreSpam, type DraftCatalogItem } from '@tradepilot/shared/outreach'
 import type { Language } from '@tradepilot/shared'
@@ -18,7 +18,7 @@ import {
   bulkApproveSchema,
 } from './schemas'
 
-const { leads, contacts, catalogItems, messages } = schema
+const { leads, contacts, catalogItems, messages, auditEvents } = schema
 
 interface PendingDraft {
   leadId: string
@@ -306,5 +306,116 @@ export async function bulkApproveDrafts(input: unknown): Promise<Result<{ approv
       }
     }
     return { approved: rows.length }
+  })
+}
+
+export interface OutreachActivityItem {
+  id: string
+  occurredAt: string
+  subject: string | null
+  fromAddress: string | null
+  toAddress: string | null
+  status: string | null
+  role: string | null
+  folders: string[]
+  source: 'app' | 'provider'
+}
+
+export interface OutreachActivityDTO {
+  received: OutreachActivityItem[]
+  sent: OutreachActivityItem[]
+  moved: OutreachActivityItem[]
+}
+
+function toIso(input: unknown, fallback: Date): string {
+  if (typeof input === 'string') {
+    const d = new Date(input)
+    if (!Number.isNaN(d.getTime())) return d.toISOString()
+  }
+  return fallback.toISOString()
+}
+
+function toStringOrNull(input: unknown): string | null {
+  return typeof input === 'string' && input.trim().length > 0 ? input.trim() : null
+}
+
+export async function listOutreachActivity(): Promise<Result<OutreachActivityDTO>> {
+  return withAction(async () => {
+    const partial = await resolveTenantContext()
+    return runInTenant(partial, async (ctx) => {
+      requireRole(ctx, 'member')
+
+      const [receivedRows, sentRows, movedRows] = await Promise.all([
+        ctx.db.messages.findMany({
+          where: and(eq(messages.direction, 'inbound'), isNull(messages.deletedAt))!,
+          orderBy: desc(messages.receivedAt),
+          limit: 80,
+        }),
+        ctx.db.messages.findMany({
+          where: and(
+            eq(messages.direction, 'outbound'),
+            inArray(messages.status, ['sent', 'delivered', 'replied']),
+            isNull(messages.deletedAt),
+          )!,
+          orderBy: desc(messages.sentAt),
+          limit: 80,
+        }),
+        ctx.db.auditEvents.findMany({
+          where: and(
+            eq(auditEvents.entityType, 'unipile_mailing'),
+            sql`${auditEvents.after} ->> 'event' = 'mail_moved'`,
+          )!,
+          orderBy: desc(auditEvents.createdAt),
+          limit: 80,
+        }),
+      ])
+
+      const received = receivedRows.map((row) => ({
+        id: row.id,
+        occurredAt: (row.receivedAt ?? row.createdAt).toISOString(),
+        subject: row.subject ?? null,
+        fromAddress: row.fromAddress ?? null,
+        toAddress: row.toAddress ?? null,
+        status: row.status ?? null,
+        role: null,
+        folders: [],
+        source: 'provider' as const,
+      }))
+
+      const sent = sentRows.map((row) => ({
+        id: row.id,
+        occurredAt: (row.sentAt ?? row.createdAt).toISOString(),
+        subject: row.subject ?? null,
+        fromAddress: row.fromAddress ?? null,
+        toAddress: row.toAddress ?? null,
+        status: row.status ?? null,
+        role: null,
+        folders: [],
+        source:
+          (row.aiMeta as Record<string, unknown> | null | undefined)?.unipileSynced === true
+            ? ('provider' as const)
+            : ('app' as const),
+      }))
+
+      const moved = movedRows.map((row) => {
+        const after = (row.after ?? {}) as Record<string, unknown>
+        const folders = Array.isArray(after.folders)
+          ? after.folders.map((x) => toStringOrNull(x)).filter((x): x is string => !!x)
+          : []
+        return {
+          id: row.id,
+          occurredAt: toIso(after.occurredAt, row.createdAt),
+          subject: toStringOrNull(after.subject),
+          fromAddress: toStringOrNull(after.fromAddress),
+          toAddress: toStringOrNull(after.toAddress),
+          status: 'moved',
+          role: toStringOrNull(after.role),
+          folders,
+          source: 'provider' as const,
+        }
+      })
+
+      return { received, sent, moved }
+    })
   })
 }

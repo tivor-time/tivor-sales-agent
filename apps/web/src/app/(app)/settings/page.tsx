@@ -7,8 +7,8 @@ export default function SettingsPage() {
       <div>
         <h1 className="text-2xl font-semibold">Settings</h1>
         <p className="text-sm text-muted-foreground">
-          Connect a sending mailbox and verify your domain. Sending stays off until SPF, DKIM, and
-          DMARC all pass.
+          Connect your Gmail or Microsoft mailbox in one click. Deliverability is handled by your
+          provider — no DNS setup required.
         </p>
       </div>
       <DegradedBanner />

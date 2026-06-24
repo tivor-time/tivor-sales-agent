@@ -16,6 +16,7 @@
     "@tradepilot/shared": "workspace:*",
     "drizzle-orm": "^0.38.3",
     "inngest": "^4.7.0",
+    "openai": "^5.12.2",
     "tsx": "^4.19.2"
   },
   "devDependencies": {

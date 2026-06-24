@@ -4,6 +4,7 @@ import { useState, type ReactNode } from 'react'
 import { Sidebar } from './sidebar'
 import { Topbar } from './topbar'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { CopilotWidget } from '@/components/ai/copilot-widget'
 
 export function AppShell({
   children,
@@ -44,6 +45,8 @@ export function AppShell({
           <div className="mx-auto w-full max-w-7xl space-y-6">{children}</div>
         </main>
       </div>
+
+      <CopilotWidget />
     </div>
   )
 }

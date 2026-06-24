@@ -12,3 +12,4 @@ allowBuilds:
 
 minimumReleaseAgeExclude:
   - '@anthropic-ai/sdk@0.104.2'
+  - recharts@3.9.0
